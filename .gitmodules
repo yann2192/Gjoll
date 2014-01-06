@@ -1,0 +1,6 @@
+[submodule "libuv"]
+	path = libuv
+	url = https://github.com/joyent/libuv.git
+[submodule "ordo"]
+	path = ordo
+	url = git@github.com:TomCrypto/Ordo.git
