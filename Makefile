@@ -1,21 +1,37 @@
-FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -D_GNU_SOURCE -std=c99 -pthread
-BIN = bin
+FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -D_GNU_SOURCE -std=c99 -pthread -DBUILDING_GJOLL -DORDO_STATIC_LIB
+
+BINDIR = bin
 OBJDIR = obj
 INCLUDE = include
 SRCDIR = src
+
+LIBUV_INCLUDE = libuv/include
+ORDO_INCLUDE = ordo/include
+LIBUV_LIB = libuv/.libs/libuv.a
+ORDO_LIB = ordo/build/libordo_s.a
+
+LD_FLAGS = -pthread $(LIBUV_LIB) $(ORDO_LIB)
+
 SRC = $(wildcard $(SRCDIR)/*.c)
 OBJ = $(notdir $(SRC:.c=.o))
 OBJ := $(addprefix $(OBJDIR)/, $(OBJ))
-LIB = libgjoll.a
+
+ifeq ($(shared), 1)
+    LIB = bin/libgjoll.so
+    FLAGS += -fpic
+else
+    LIB = bin/libgjoll.a
+    AR ?= ar
+endif
 
 OBJDIR_D = obj/daemon
 SRCDIR_D = src/daemon
 SRC_D = $(wildcard $(SRCDIR_D)/*.c)
 OBJ_D = $(notdir $(SRC_D:.c=.o))
 OBJ_D := $(addprefix $(OBJDIR_D)/, $(OBJ_D))
-EXEC_D = $(BIN)/gjoll
+EXEC_D = $(BINDIR)/gjoll
 
-all: lib daemon
+all: libuv ordo lib daemon
 
 lib: $(LIB)
 
@@ -30,41 +46,45 @@ $(OBJDIR):
 $(OBJDIR_D):
 	mkdir -p $@
 
-$(BIN):
+$(BINDIR):
 	mkdir $@
 
 $(LIBDIR):
 	mkdir $@
 
-_libuv: libuv/.libs/libuv.a
+libuv: $(LIBUV_LIB)
 
-libuv/.libs/libuv.a:
+$(LIBUV_LIB):
 	cd libuv; sh autogen.sh; ./configure; make
 
-_ordo: ordo/build/libordo_s.a
+ordo: $(ORDO_LIB)
 
-ordo/build/libordo_s.a:
-	cd ordo/build && cmake .. -DARCH=amd64 && make
+$(ORDO_LIB):
+	cd ordo/build && cmake .. $(ORDO_CONFIG) && make
 
-$(LIB): $(OBJDIR) _libuv _ordo $(OBJ)
-	ar rcs $@ $(OBJ)
+bin/libgjoll.a: $(BINDIR) $(OBJDIR) $(OBJ)
+	$(AR) rcs $@ $(OBJ)
 
-$(EXEC_D): $(OBJDIR_D) $(OBJ_D) $(BIN) $(LIB)
-	gcc -o $(EXEC_D) $(OBJ_D) $(FLAGS) libuv/.libs/libuv.a ordo/build/libordo_s.a $(LIB)
+bin/libgjoll.so: $(BINDIR) $(OBJDIR) $(OBJ)
+	$(CC) -shared -o $@ $(OBJ) $(LD_FLAGS) $(LD_FLAGS)
+
+$(EXEC_D): $(BINDIR) $(OBJDIR_D) $(OBJ_D) $(LIB)
+	$(CC) -o $(EXEC_D) $(OBJ_D) $(FLAGS) $(LD_FLAGS) $(LIB)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	gcc -c $< $(FLAGS) -I$(INCLUDE) -Ilibuv/include -Iordo/include -o $@
+	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -o $@
 
 $(OBJDIR_D)/%.o: $(SRCDIR_D)/%.c
-	gcc -c $< $(FLAGS) -I$(INCLUDE) -Ilibuv/include -Iordo/include -o $@
+	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -o $@
 
+.PHONY: clean
 clean:
 	rm -fr $(OBJDIR_D)
 	rm -fr $(OBJDIR)
-	rm -fr $(BIN)
-	rm -fr $(LIB)
+	rm -fr $(BINDIR)
 	cd test && make clean
 
+.PHONY: cleanall
 cleanall: clean
 	cd libuv; make clean
 	cd ordo/build; make clean
