@@ -11,23 +11,38 @@
 extern "C" {
 #endif
 
-#ifdef _WIN32
-    /* Windows - set up dll import/export decorators. */
-# if defined(BUILD_SHARED)
-    /* Building shared library. */
-#   define GJOLL_EXTERN __declspec(dllexport)
-# elif defined(USING_SHARED)
-    /* Using shared library. */
-#   define GJOLL_EXTERN __declspec(dllimport)
-# else
-    /* Building static library. */
-#   define GJOLL_EXTERN /* nothing */
-# endif
-#elif __GNUC__ >= 4
-# define GJOLL_EXTERN __attribute__((visibility("default")))
+#if defined(BUILDING_GJOLL)
+    #if defined(GJOLL_EXPORTS)
+        #define BUILD_SHARED
+    #endif
 #else
-# define GJOLL_EXTERN /* nothing */
+    #if !defined(GJOLL_STATIC_LIB)
+        #define USING_SHARED
+    #endif
 #endif
+
+#if defined(__MINGW32__) || defined(_MSC_VER)
+    #if defined(BUILD_SHARED)
+        #define GJOLL_EXTERN __declspec(dllexport)
+    #elif defined(USING_SHARED)
+        #define GJOLL_EXTERN __declspec(dllimport)
+    #else
+        #define GJOLL_EXTERN
+    #endif
+#elif defined(__clang__) || defined(__GNUC__)
+    #if defined(BUILD_SHARED)
+        #define GJOLL_EXTERN __attribute__((visibility("default")))
+    #elif defined(USING_SHARED)
+        #define GJOLL_EXTERN __attribute__((visibility("default")))
+    #else
+        #define GJOLL_EXTERN
+    #endif
+#else
+    #error "Unsupported compiler!"
+#endif
+
+#undef BUILD_SHARED
+#undef USING_SHARED
 
 #include <stdlib.h>
 #include <stdint.h>
