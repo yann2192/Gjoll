@@ -1,4 +1,4 @@
-FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -D_GNU_SOURCE -std=c89 -pthread
+FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -D_GNU_SOURCE -std=c99 -pthread
 BIN = bin
 OBJDIR = obj
 INCLUDE = include
@@ -20,6 +20,9 @@ all: lib daemon
 lib: $(LIB)
 
 daemon: $(EXEC_D)
+
+test: lib
+	cd test && make
 
 $(OBJDIR):
 	mkdir -p $@
@@ -60,6 +63,7 @@ clean:
 	rm -fr $(OBJDIR)
 	rm -fr $(BIN)
 	rm -fr $(LIB)
+	cd test && make clean
 
 cleanall: clean
 	cd libuv; make clean
