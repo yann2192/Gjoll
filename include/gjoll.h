@@ -58,7 +58,7 @@ extern "C" {
 typedef uint16_t gjoll_service_t;
 
 typedef struct {
-    char* data;
+    void* data;
     size_t len;
 } gjoll_buf_t;
 
@@ -70,6 +70,8 @@ typedef struct {
     char fingerprint[GJOLL_FINGERPRINT_SIZE];
     gjoll_buf_t buf;
 } gjoll_header_t;
+
+GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void*, size_t);
 
 GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf);
 
