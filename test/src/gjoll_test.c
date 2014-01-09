@@ -11,7 +11,7 @@
 
 
 static char* all_tests() {
-    header_tests();
+    mu_run(header_tests);
     return 0;
 }
 
