@@ -40,10 +40,12 @@ GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf) {
 
     if(buf.len < GJOLL_HEADER_MIN_LENGTH) {
         /* Packet too small */
-        return h;
+        goto error;
     }
 
     h = malloc(sizeof(gjoll_service_t));
+    if(h == NULL)
+        goto error;
     h->buf = gjoll_buf_init(NULL, 0);
 
     memcpy(h->nonce, OFFSET(buf.data, i), GJOLL_NONCE_SIZE);
@@ -66,10 +68,17 @@ GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf) {
     if(data_size > 0) {
         h->buf.len = data_size;
         h->buf.data = malloc(data_size);
+        if(h->buf.data == NULL)
+            goto error;
         memcpy((char *)h->buf.data, OFFSET(buf.data, i), data_size);
     }
 
     return h;
+
+error:
+    if(h != NULL)
+        free(h);
+    return NULL;
 }
 
 GJOLL_EXTERN int gjoll_header_len(const gjoll_header_t* h) {
@@ -82,6 +91,10 @@ GJOLL_EXTERN gjoll_buf_t gjoll_header_compute(const gjoll_header_t* h) {
     gjoll_buf_t buf;
     buf.len = gjoll_header_len(h);
     buf.data = malloc(buf.len);
+    if(buf.data == NULL) {
+        buf.len = 0;
+        return buf;
+    }
 
     memcpy(OFFSET(buf.data, i), h->nonce, GJOLL_NONCE_SIZE);
     i += GJOLL_NONCE_SIZE;
