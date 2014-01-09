@@ -14,6 +14,8 @@
 // for endianness
 #include "ordo/internal/sys.h"
 
+#define OFFSET(p, i) ((char *)p + i)
+
 
 GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void* data, size_t len) {
     gjoll_buf_t buf;
@@ -44,27 +46,27 @@ GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf) {
     h = malloc(sizeof(gjoll_service_t));
     h->buf = gjoll_buf_init(NULL, 0);
 
-    memcpy(h->nonce, (char*)buf.data, GJOLL_NONCE_SIZE);
+    memcpy(h->nonce, OFFSET(buf.data, i), GJOLL_NONCE_SIZE);
     i += GJOLL_NONCE_SIZE;
 
-    memcpy(h->src, (char*)buf.data+i, GJOLL_IDENTIFIER_SIZE);
+    memcpy(h->src, OFFSET(buf.data, i), GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
-    memcpy(h->dst, (char*)buf.data+i, GJOLL_IDENTIFIER_SIZE);
+    memcpy(h->dst, OFFSET(buf.data, i), GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
-    memcpy(&service, (char*)buf.data+i, GJOLL_SERVICE_SIZE);
+    memcpy(&service, OFFSET(buf.data, i), GJOLL_SERVICE_SIZE);
     i += GJOLL_SERVICE_SIZE;
     h->service = htobe16_(service);
 
-    memcpy(h->fingerprint, (char*)buf.data+i, GJOLL_FINGERPRINT_SIZE);
+    memcpy(h->fingerprint, OFFSET(buf.data, i), GJOLL_FINGERPRINT_SIZE);
     i += GJOLL_FINGERPRINT_SIZE;
 
     data_size = buf.len-i;
     if(data_size > 0) {
         h->buf.len = data_size;
         h->buf.data = malloc(data_size);
-        memcpy((char *)h->buf.data, (char*)buf.data+i, data_size);
+        memcpy((char *)h->buf.data, OFFSET(buf.data, i), data_size);
     }
 
     return h;
@@ -81,23 +83,23 @@ GJOLL_EXTERN gjoll_buf_t gjoll_header_compute(const gjoll_header_t* h) {
     buf.len = gjoll_header_len(h);
     buf.data = malloc(buf.len);
 
-    memcpy((char*)buf.data, h->nonce, GJOLL_NONCE_SIZE);
+    memcpy(OFFSET(buf.data, i), h->nonce, GJOLL_NONCE_SIZE);
     i += GJOLL_NONCE_SIZE;
 
-    memcpy((char*)buf.data+i, h->src, GJOLL_IDENTIFIER_SIZE);
+    memcpy(OFFSET(buf.data, i), h->src, GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
-    memcpy((char*)buf.data+i, h->dst, GJOLL_IDENTIFIER_SIZE);
+    memcpy(OFFSET(buf.data, i), h->dst, GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
     service = be16toh_(h->service);
-    memcpy((char*)buf.data+i, &service, GJOLL_SERVICE_SIZE);
+    memcpy(OFFSET(buf.data, i), &service, GJOLL_SERVICE_SIZE);
     i += GJOLL_SERVICE_SIZE;
 
-    memcpy((char*)buf.data+i, h->fingerprint, GJOLL_FINGERPRINT_SIZE);
+    memcpy(OFFSET(buf.data, i), h->fingerprint, GJOLL_FINGERPRINT_SIZE);
     i += GJOLL_FINGERPRINT_SIZE;
 
-    memcpy((char*)buf.data+i, (char*)h->buf.data, h->buf.len);
+    memcpy(OFFSET(buf.data, i), (char*)h->buf.data, h->buf.len);
 
     return buf;
 }
