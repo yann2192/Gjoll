@@ -26,7 +26,6 @@ $(OBJDIR):
 	mkdir -p $@
 
 $(BIN): $(OBJDIR) $(OBJ) $(LIB)
-	#$(CC) -o $(BIN) $(OBJ) $(FLAGS) $(LD_FLAGS) $(LIB)
 	$(CC) -o $(BIN) $(OBJ) $(FLAGS) $(LIB) $(LD_FLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c

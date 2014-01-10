@@ -24,12 +24,21 @@ GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void* data, size_t len) {
     return buf;
 }
 
+GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t* buf) {
+    if(buf->data != NULL) {
+        free(buf->data);
+        buf->data = NULL;
+    }
+    buf->len = 0;
+}
+
 GJOLL_EXTERN void gjoll_free_header(gjoll_header_t* h) {
     if(h->buf.data != NULL) {
         free(h->buf.data);
         h->buf.data = NULL;
         h->buf.len = 0;
     }
+    free(h);
 }
 
 GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf) {
@@ -43,7 +52,7 @@ GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf) {
         goto error;
     }
 
-    h = malloc(sizeof(gjoll_service_t));
+    h = malloc(sizeof(gjoll_header_t));
     if(h == NULL)
         goto error;
     h->buf = gjoll_buf_init(NULL, 0);
@@ -85,7 +94,7 @@ GJOLL_EXTERN int gjoll_header_len(const gjoll_header_t* h) {
     return h->buf.len+GJOLL_HEADER_MIN_LENGTH;
 }
 
-GJOLL_EXTERN gjoll_buf_t gjoll_header_compute(const gjoll_header_t* h) {
+GJOLL_EXTERN gjoll_buf_t gjoll_compute_header(const gjoll_header_t* h) {
     unsigned int i = 0;
     uint16_t service;
     gjoll_buf_t buf;
@@ -112,7 +121,9 @@ GJOLL_EXTERN gjoll_buf_t gjoll_header_compute(const gjoll_header_t* h) {
     memcpy(OFFSET(buf.data, i), h->fingerprint, GJOLL_FINGERPRINT_SIZE);
     i += GJOLL_FINGERPRINT_SIZE;
 
-    memcpy(OFFSET(buf.data, i), (char*)h->buf.data, h->buf.len);
+    if(h->buf.data != NULL) {
+        memcpy(OFFSET(buf.data, i), (char*)h->buf.data, h->buf.len);
+    }
 
     return buf;
 }
