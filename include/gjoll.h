@@ -7,6 +7,7 @@
 
 #ifndef GJOLL_H
 #define GJOLL_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -53,12 +54,13 @@ extern "C" {
 #define GJOLL_SERVICE_SIZE 2
 
 #define GJOLL_HEADER_MIN_LENGTH 42
+#define GJOLL_MAX_DATA_LENGTH (536 - 42)
 
 /* types */
 typedef uint16_t gjoll_service_t;
 
 typedef struct {
-    void* data;
+    void *data;
     size_t len;
 } gjoll_buf_t;
 
@@ -66,24 +68,43 @@ typedef struct {
     char nonce[GJOLL_NONCE_SIZE];
     char src[GJOLL_IDENTIFIER_SIZE];
     char dst[GJOLL_IDENTIFIER_SIZE];
-    gjoll_service_t service;
+    char service[GJOLL_SERVICE_SIZE];
     char fingerprint[GJOLL_FINGERPRINT_SIZE];
-    gjoll_buf_t buf;
-} gjoll_header_t;
+    char data[GJOLL_MAX_DATA_LENGTH];
+    size_t data_len;
+} gjoll_packet_t;
 
-GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void*, size_t);
+// allocates a gjoll_buf_t
+GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void *, size_t);
 
-GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t* buf);
+// frees a gjoll_buf_t
+GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t *buf);
 
-GJOLL_EXTERN void gjoll_free_header(gjoll_header_t* h);
+// encrypts data in a gjoll_buf_t into a gjoll_packet_t
+// for instance: encrypt("hello world", &packet)
+#if 0
+GJOLL_EXTERN int gjoll_encode_packet(gjoll_buf_t buf, gjoll_packet_t *packet);
+#endif
 
-GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf);
+// decrypts a gjoll_packet_t into a (non-allocated) gjoll_buf_t
+// for instance: decrypt(&packet) -> "hello world"
+#if 0
+GJOLL_EXTERN int gjoll_decode_packet(const gjoll_packet_t *packet, gjoll_buf_t *buf);
+#endif
 
-GJOLL_EXTERN int gjoll_header_len(const gjoll_header_t* h);
+// encodes a header directly from a gjoll_buf_t
+// for instance: encode(udp_recv(), &packet)
+GJOLL_EXTERN int gjoll_encode_packet(gjoll_buf_t buf, gjoll_packet_t *packet);
 
-GJOLL_EXTERN gjoll_buf_t gjoll_compute_header(const gjoll_header_t* h);
+// decodes a gjoll_packet_t into a gjoll_buf_t
+// for instance: decode(&packet, &buf) udp_send(buf)
+GJOLL_EXTERN int gjoll_decode_packet(const gjoll_packet_t *packet, gjoll_buf_t *buf);
+
+// returns the total length of a gjoll_packet_t (header + data)
+GJOLL_EXTERN int gjoll_packet_len(const gjoll_packet_t *packet);
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* end of include guard: GJOLL_H */
+
+#endif
