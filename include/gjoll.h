@@ -81,6 +81,7 @@ GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t *buf);
 GJOLL_EXTERN int gjoll_encrypt_packet(gjoll_header_t *header,
                                       gjoll_buf_t data,
                                       const void *shared_secret,
+                                      const void *nonce,
                                       gjoll_buf_t *buf);
 
 // decrypts a data buffer containing a packet and extracts the header
