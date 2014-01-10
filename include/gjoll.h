@@ -83,4 +83,7 @@ GJOLL_EXTERN int gjoll_header_len(const gjoll_header_t* h);
 
 GJOLL_EXTERN gjoll_buf_t gjoll_compute_header(const gjoll_header_t* h);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* end of include guard: GJOLL_H */
