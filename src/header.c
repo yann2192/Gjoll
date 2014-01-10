@@ -17,14 +17,14 @@
 #define OFFSET(p, i) ((char *)p + i)
 
 
-GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void* data, size_t len) {
+gjoll_buf_t gjoll_buf_init(void* data, size_t len) {
     gjoll_buf_t buf;
     buf.data = data;
     buf.len = len;
     return buf;
 }
 
-GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t* buf) {
+void gjoll_free_buf(gjoll_buf_t* buf) {
     if(buf->data != NULL) {
         free(buf->data);
         buf->data = NULL;
@@ -32,98 +32,112 @@ GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t* buf) {
     buf->len = 0;
 }
 
-GJOLL_EXTERN void gjoll_free_header(gjoll_header_t* h) {
-    if(h->buf.data != NULL) {
-        free(h->buf.data);
-        h->buf.data = NULL;
-        h->buf.len = 0;
-    }
-    free(h);
+GJOLL_EXTERN int gjoll_encrypt_packet(gjoll_header_t *header,
+                                      gjoll_buf_t data,
+                                      const void *shared_secret,
+                                      gjoll_buf_t *buf)
+{
+    // 1. generate random nonce
+    // 2. read src, derive encryption key
+    // 3. encrypt src, id, data
+    // 4. generate fingeprint
+
+    return 0;
 }
 
-GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf) {
+GJOLL_EXTERN int gjoll_decrypt_header(gjoll_buf_t buf,
+                                      gjoll_header_t *header,
+                                      const void *shared_secret,
+                                      void **ctx)
+{
+    // 1. read nonce + src, derive encryption key
+    // 2. fingerprint packet and verify
+    // 3. decrypt dst, id, save ctx
+    
+    return 0;
+}
+
+GJOLL_EXTERN int gjoll_decrypt_data(gjoll_buf_t buf,
+                                    gjoll_buf_t *data,
+                                    void *ctx)
+{
+    // use ctx to finish decryption of data
+    
+    return 0;
+}
+
+#if 0
+
+int gjoll_encode_packet(gjoll_buf_t buf, gjoll_packet_t *packet) {
     int data_size;
     unsigned int i = 0;
-    uint16_t service;
-    gjoll_header_t *h = NULL;
 
     if(buf.len < GJOLL_HEADER_MIN_LENGTH) {
         /* Packet too small */
         goto error;
     }
 
-    h = malloc(sizeof(gjoll_header_t));
-    if(h == NULL)
-        goto error;
-    h->buf = gjoll_buf_init(NULL, 0);
-
-    memcpy(h->nonce, OFFSET(buf.data, i), GJOLL_NONCE_SIZE);
+    memcpy(packet->nonce, OFFSET(buf.data, i), GJOLL_NONCE_SIZE);
     i += GJOLL_NONCE_SIZE;
 
-    memcpy(h->src, OFFSET(buf.data, i), GJOLL_IDENTIFIER_SIZE);
+    memcpy(packet->src, OFFSET(buf.data, i), GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
-    memcpy(h->dst, OFFSET(buf.data, i), GJOLL_IDENTIFIER_SIZE);
+    memcpy(packet->dst, OFFSET(buf.data, i), GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
-    memcpy(&service, OFFSET(buf.data, i), GJOLL_SERVICE_SIZE);
+    memcpy(packet->service, OFFSET(buf.data, i), GJOLL_SERVICE_SIZE);
     i += GJOLL_SERVICE_SIZE;
-    h->service = htobe16_(service);
 
-    memcpy(h->fingerprint, OFFSET(buf.data, i), GJOLL_FINGERPRINT_SIZE);
+    memcpy(packet->fingerprint, OFFSET(buf.data, i), GJOLL_FINGERPRINT_SIZE);
     i += GJOLL_FINGERPRINT_SIZE;
 
     data_size = buf.len-i;
     if(data_size > 0) {
-        h->buf.len = data_size;
-        h->buf.data = malloc(data_size);
-        if(h->buf.data == NULL)
-            goto error;
-        memcpy((char *)h->buf.data, OFFSET(buf.data, i), data_size);
+        packet->data_len = data_size;
+        memcpy(packet->data, OFFSET(buf.data, i), data_size);
     }
 
-    return h;
+    return 0;
 
 error:
-    if(h != NULL)
-        free(h);
-    return NULL;
+    return 1;
 }
 
-GJOLL_EXTERN int gjoll_header_len(const gjoll_header_t* h) {
-    return h->buf.len+GJOLL_HEADER_MIN_LENGTH;
+int gjoll_packet_len(const gjoll_packet_t *packet) {
+    return packet->data_len + GJOLL_HEADER_MIN_LENGTH;
 }
 
-GJOLL_EXTERN gjoll_buf_t gjoll_compute_header(const gjoll_header_t* h) {
+int gjoll_decode_packet(const gjoll_packet_t *packet, gjoll_buf_t *buf) {
     unsigned int i = 0;
-    uint16_t service;
-    gjoll_buf_t buf;
-    buf.len = gjoll_header_len(h);
-    buf.data = malloc(buf.len);
-    if(buf.data == NULL) {
-        buf.len = 0;
-        return buf;
+    buf->len = gjoll_packet_len(packet);
+    buf->data = malloc(buf->len);
+    if(buf->data == NULL) {
+        buf->len = 0;
+        goto error;
     }
 
-    memcpy(OFFSET(buf.data, i), h->nonce, GJOLL_NONCE_SIZE);
+    memcpy(OFFSET(buf->data, i), packet->nonce, GJOLL_NONCE_SIZE);
     i += GJOLL_NONCE_SIZE;
 
-    memcpy(OFFSET(buf.data, i), h->src, GJOLL_IDENTIFIER_SIZE);
+    memcpy(OFFSET(buf->data, i), packet->src, GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
-    memcpy(OFFSET(buf.data, i), h->dst, GJOLL_IDENTIFIER_SIZE);
+    memcpy(OFFSET(buf->data, i), packet->dst, GJOLL_IDENTIFIER_SIZE);
     i += GJOLL_IDENTIFIER_SIZE;
 
-    service = be16toh_(h->service);
-    memcpy(OFFSET(buf.data, i), &service, GJOLL_SERVICE_SIZE);
+    memcpy(OFFSET(buf->data, i), packet->service, GJOLL_SERVICE_SIZE);
     i += GJOLL_SERVICE_SIZE;
 
-    memcpy(OFFSET(buf.data, i), h->fingerprint, GJOLL_FINGERPRINT_SIZE);
+    memcpy(OFFSET(buf->data, i), packet->fingerprint, GJOLL_FINGERPRINT_SIZE);
     i += GJOLL_FINGERPRINT_SIZE;
 
-    if(h->buf.data != NULL) {
-        memcpy(OFFSET(buf.data, i), (char*)h->buf.data, h->buf.len);
-    }
+    memcpy(OFFSET(buf->data, i), packet->data, packet->data_len);
 
-    return buf;
+    return 0;
+
+error:
+    return 1;
 }
+
+#endif

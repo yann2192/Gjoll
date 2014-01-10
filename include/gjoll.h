@@ -7,6 +7,7 @@
 
 #ifndef GJOLL_H
 #define GJOLL_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -51,39 +52,54 @@ extern "C" {
 #define GJOLL_IDENTIFIER_SIZE 8
 #define GJOLL_FINGERPRINT_SIZE 16
 #define GJOLL_SERVICE_SIZE 2
+#define GJOLL_SHARED_SIZE 32
 
 #define GJOLL_HEADER_MIN_LENGTH 42
+#define GJOLL_MAX_DATA_LENGTH (536 - 42)
 
 /* types */
+typedef uint64_t gjoll_node_t;
 typedef uint16_t gjoll_service_t;
 
 typedef struct {
-    void* data;
+    void *data;
     size_t len;
 } gjoll_buf_t;
 
 typedef struct {
-    char nonce[GJOLL_NONCE_SIZE];
-    char src[GJOLL_IDENTIFIER_SIZE];
-    char dst[GJOLL_IDENTIFIER_SIZE];
-    gjoll_service_t service;
-    char fingerprint[GJOLL_FINGERPRINT_SIZE];
-    gjoll_buf_t buf;
+    gjoll_node_t src, dst;
+    gjoll_service_t id;
 } gjoll_header_t;
 
-GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void*, size_t);
+// allocates a gjoll_buf_t
+GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void *, size_t);
 
-GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t* buf);
+// frees a gjoll_buf_t
+GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t *buf);
 
-GJOLL_EXTERN void gjoll_free_header(gjoll_header_t* h);
+// encrypts a header + data into a gjoll_buf_t
+GJOLL_EXTERN int gjoll_encrypt_packet(gjoll_header_t *header,
+                                      gjoll_buf_t data,
+                                      const void *shared_secret,
+                                      const void *nonce,
+                                      gjoll_buf_t *buf);
 
-GJOLL_EXTERN gjoll_header_t* gjoll_parse_header(const gjoll_buf_t buf);
+// decrypts a data buffer containing a packet and extracts the header
+// *ctx will contain an encryption context to pass to gjoll_decrypt_data
+GJOLL_EXTERN int gjoll_decrypt_header(gjoll_buf_t buf,
+                                      gjoll_header_t *header,
+                                      const void *shared_secret,
+                                      void **ctx);
 
-GJOLL_EXTERN int gjoll_header_len(const gjoll_header_t* h);
-
-GJOLL_EXTERN gjoll_buf_t gjoll_compute_header(const gjoll_header_t* h);
+// decrypts a data buffer containing a packet and extracts the data
+// needs the ctx acquired from gjoll_decrypt_header
+// if data is 0, just frees the ctx
+GJOLL_EXTERN int gjoll_decrypt_data(gjoll_buf_t buf,
+                                    gjoll_buf_t *data,
+                                    void *ctx);
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* end of include guard: GJOLL_H */
+
+#endif
