@@ -32,6 +32,42 @@ void gjoll_free_buf(gjoll_buf_t* buf) {
     buf->len = 0;
 }
 
+GJOLL_EXTERN int gjoll_encrypt_packet(gjoll_header_t *header,
+                                      gjoll_buf_t data,
+                                      const void *shared_secret,
+                                      gjoll_buf_t *buf)
+{
+    // 1. generate random nonce
+    // 2. read src, derive encryption key
+    // 3. encrypt src, id, data
+    // 4. generate fingeprint
+
+    return 0;
+}
+
+GJOLL_EXTERN int gjoll_decrypt_header(gjoll_buf_t buf,
+                                      gjoll_header_t *header,
+                                      const void *shared_secret,
+                                      void **ctx)
+{
+    // 1. read nonce + src, derive encryption key
+    // 2. fingerprint packet and verify
+    // 3. decrypt dst, id, save ctx
+    
+    return 0;
+}
+
+GJOLL_EXTERN int gjoll_decrypt_data(gjoll_buf_t buf,
+                                    gjoll_buf_t *data,
+                                    void *ctx)
+{
+    // use ctx to finish decryption of data
+    
+    return 0;
+}
+
+#if 0
+
 int gjoll_encode_packet(gjoll_buf_t buf, gjoll_packet_t *packet) {
     int data_size;
     unsigned int i = 0;
@@ -103,3 +139,5 @@ int gjoll_decode_packet(const gjoll_packet_t *packet, gjoll_buf_t *buf) {
 error:
     return 1;
 }
+
+#endif
