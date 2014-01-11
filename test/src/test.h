@@ -10,5 +10,6 @@
 int tests_run;
 
 char* header_tests();
+char* crypto_tests();
 
 #endif
