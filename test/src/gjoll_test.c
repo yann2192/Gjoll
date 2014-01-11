@@ -12,6 +12,7 @@
 
 static char* all_tests() {
     mu_run(header_tests);
+    mu_run(crypto_tests);
     return 0;
 }
 

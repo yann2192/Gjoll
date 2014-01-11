@@ -11,12 +11,6 @@
 
 #include "gjoll.h"
 
-// for endianness
-#include "ordo/internal/sys.h"
-
-#define OFFSET(p, i) ((char *)p + i)
-
-
 gjoll_buf_t gjoll_buf_init(void* data, size_t len) {
     gjoll_buf_t buf;
     buf.data = data;
@@ -30,40 +24,6 @@ void gjoll_free_buf(gjoll_buf_t* buf) {
         buf->data = NULL;
     }
     buf->len = 0;
-}
-
-GJOLL_EXTERN int gjoll_encrypt_packet(gjoll_header_t *header,
-                                      gjoll_buf_t data,
-                                      const void *shared_secret,
-                                      gjoll_buf_t *buf)
-{
-    // 1. generate random nonce
-    // 2. read src, derive encryption key
-    // 3. encrypt src, id, data
-    // 4. generate fingeprint
-
-    return 0;
-}
-
-GJOLL_EXTERN int gjoll_decrypt_header(gjoll_buf_t buf,
-                                      gjoll_header_t *header,
-                                      const void *shared_secret,
-                                      void **ctx)
-{
-    // 1. read nonce + src, derive encryption key
-    // 2. fingerprint packet and verify
-    // 3. decrypt dst, id, save ctx
-    
-    return 0;
-}
-
-GJOLL_EXTERN int gjoll_decrypt_data(gjoll_buf_t buf,
-                                    gjoll_buf_t *data,
-                                    void *ctx)
-{
-    // use ctx to finish decryption of data
-    
-    return 0;
 }
 
 #if 0

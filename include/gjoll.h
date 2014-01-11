@@ -52,10 +52,11 @@ extern "C" {
 #define GJOLL_IDENTIFIER_SIZE 8
 #define GJOLL_FINGERPRINT_SIZE 16
 #define GJOLL_SERVICE_SIZE 2
-#define GJOLL_SHARED_SIZE 32
 
 #define GJOLL_HEADER_MIN_LENGTH 42
 #define GJOLL_MAX_DATA_LENGTH (536 - 42)
+
+#define OFFSET(p, i) ((unsigned char *)p + i)
 
 /* types */
 typedef uint64_t gjoll_node_t;
@@ -76,27 +77,6 @@ GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void *, size_t);
 
 // frees a gjoll_buf_t
 GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t *buf);
-
-// encrypts a header + data into a gjoll_buf_t
-GJOLL_EXTERN int gjoll_encrypt_packet(gjoll_header_t *header,
-                                      gjoll_buf_t data,
-                                      const void *shared_secret,
-                                      const void *nonce,
-                                      gjoll_buf_t *buf);
-
-// decrypts a data buffer containing a packet and extracts the header
-// *ctx will contain an encryption context to pass to gjoll_decrypt_data
-GJOLL_EXTERN int gjoll_decrypt_header(gjoll_buf_t buf,
-                                      gjoll_header_t *header,
-                                      const void *shared_secret,
-                                      void **ctx);
-
-// decrypts a data buffer containing a packet and extracts the data
-// needs the ctx acquired from gjoll_decrypt_header
-// if data is 0, just frees the ctx
-GJOLL_EXTERN int gjoll_decrypt_data(gjoll_buf_t buf,
-                                    gjoll_buf_t *data,
-                                    void *ctx);
 
 #ifdef __cplusplus
 }
