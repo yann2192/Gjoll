@@ -27,15 +27,15 @@ static char* test__gjoll_encrypt_packet() {
     header.src = 0x7b8b5766931529e6ULL;
     header.dst = 0xa5010113eb0a809bULL;
     header.id = 2000;
-    
+
     gjoll_buf_t data = { "test", 4 };
-    
+
     gjoll_buf_t packet;
-    
+
     int err = gjoll_encrypt_packet(secret, header, data, &packet, nonce);
     mu_assert("error: misc. crypto error", err == 0);
     mu_assert("error: invalid packet", memcmp(packet.data, valid_packet, 46) == 0);
-    
+
     return 0;
 }
 
@@ -43,22 +43,22 @@ static char* test__gjoll_decrypt_packet() {
     gjoll_header_t header;
     gjoll_buf_t data;
     void *ctx;
-    
+
     gjoll_buf_t packet;
     packet.data = valid_packet;
     packet.len = sizeof(valid_packet);
 
     int err = gjoll_decrypt_header(secret, packet, &header, &ctx);
     mu_assert("error: misc. crypto error", err == 0);
-    
+
     mu_assert("error: src incorrect", header.src == 0x7b8b5766931529e6ULL);
     mu_assert("error: dst incorrect", header.dst == 0xa5010113eb0a809bULL);
     mu_assert("error: id incorrect", header.id == 2000);
-    
+
     err = gjoll_decrypt_data(secret, packet, &data, ctx);
     mu_assert("error: misc. crypto error", err == 0);
     mu_assert("error: data incorrect", (data.len == 4) && (memcmp(data.data, "test", data.len) == 0));
-    
+
     return 0;
 }
 
