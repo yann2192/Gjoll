@@ -48,6 +48,8 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "uv.h"
+
 #define GJOLL_NONCE_SIZE 8
 #define GJOLL_IDENTIFIER_SIZE 8
 #define GJOLL_FINGERPRINT_SIZE 16
@@ -77,6 +79,62 @@ GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void *, size_t);
 
 // frees a gjoll_buf_t
 GJOLL_EXTERN void gjoll_free_buf(gjoll_buf_t *buf);
+
+typedef struct {
+    uv_loop_t* loop;
+} gjoll_loop_t;
+
+GJOLL_EXTERN int gjoll_init(gjoll_loop_t *gloop);
+
+GJOLL_EXTERN void gjoll_delete(gjoll_loop_t *gloop);
+
+GJOLL_EXTERN int gjoll_run(gjoll_loop_t gloop);
+
+typedef struct gjoll_connection_s gjoll_connection_t;
+
+typedef void (*gjoll_session_cb) (const gjoll_connection_t *gconn,
+                                  void *identifier,
+                                  const struct sockaddr *addr);
+
+struct gjoll_connection_s {
+    uv_udp_t sock;
+    gjoll_session_cb gs_cb;
+};
+
+GJOLL_EXTERN int gjoll_new_connection(gjoll_loop_t gloop,
+                         gjoll_connection_t *gconn);
+
+GJOLL_EXTERN void gjoll_close_connection(gjoll_connection_t *gconn);
+
+GJOLL_EXTERN int gjoll_bind_connection(gjoll_connection_t *gconn,
+                          const struct sockaddr *addr,
+                          int namelen);
+
+GJOLL_EXTERN int gjoll_up_connection(gjoll_connection_t *gconn,
+                           gjoll_session_cb gs_cb);
+
+typedef struct gjoll_session_s gjoll_session_t;
+
+typedef void (*gjoll_recv_cb) (gjoll_session_t *session,
+                               gjoll_buf_t buf);
+
+struct gjoll_session_s {
+    gjoll_connection_t *conn;
+    const struct sockaddr *addr;
+    const void *identifier;
+    const void *shared;
+    gjoll_recv_cb recv_cb;
+};
+
+GJOLL_EXTERN int gjoll_new_session(gjoll_connection_t *gconn,
+                      gjoll_session_t *session,
+                      const struct sockaddr *addr,
+                      const void *identifier,
+                      const void *shared,
+                      const size_t shared_len,
+                      gjoll_recv_cb recv_cb);
+
+GJOLL_EXTERN int gjoll_send(gjoll_session_t *session, void *data, size_t len);
 
 #ifdef __cplusplus
 }

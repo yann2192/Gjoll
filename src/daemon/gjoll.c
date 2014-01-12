@@ -1,12 +1,40 @@
 #include <stdio.h>
 
 #include "ordo.h"
+#include "gjoll.h"
 #include "uv.h"
 
+void session_cb(const gjoll_connection_t *gconn,
+                void *identifier,
+                const struct sockaddr *addr) {
+    printf("%s\n", (char *)identifier);
+}
+
 int main(int argc, char **argv) {
-    uv_loop_t *loop = uv_loop_new();
-    printf("hello world\n");
     ordo_init();
-    uv_run(loop, UV_RUN_DEFAULT);
+    gjoll_loop_t loop;
+    if(gjoll_init(&loop)) {
+        fprintf(stderr, "gjoll_init failed\n");
+        return 1;
+    }
+    gjoll_connection_t conn;
+    if(gjoll_new_connection(loop, &conn)) {
+        fprintf(stderr, "gjoll_new_connection failed\n");
+        return 1;
+    }
+    struct sockaddr_in bind_addr;
+    if(uv_ip4_addr("0.0.0.0", 9999, &bind_addr)) {
+        fprintf(stderr, "uv_ip4_addr failed\n");
+        return 1;
+    }
+    if(gjoll_bind_connection(&conn, (const struct sockaddr*) &bind_addr, 0)) {
+        fprintf(stderr, "gjoll_bind_connection failed\n");
+        return 1;
+    }
+    if(gjoll_up_connection(&conn, session_cb)) {
+        fprintf(stderr, "gjoll_ready_connection failed\n");
+        return 1;
+    }
+    gjoll_run(loop);
     return 0;
 }
