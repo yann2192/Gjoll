@@ -89,7 +89,7 @@ int gjoll_new_session(gjoll_connection_t *gconn,
     return 0;
 }
 
-int gjoll_send(gjoll_session_t *session, void *data, size_t len) {
+int gjoll_send(const gjoll_session_t *session, void *data, size_t len) {
     uv_udp_send_t req;
     uv_buf_t *buf = malloc(sizeof(uv_buf_t));
     buf->base = data;
