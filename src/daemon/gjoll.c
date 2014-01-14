@@ -1,13 +1,16 @@
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "ordo.h"
 #include "gjoll.h"
 #include "uv.h"
 
-void session_cb(const gjoll_connection_t *gconn,
-                void *identifier,
+gjoll_session_t *session_cb(const gjoll_connection_t *gconn,
+                const gjoll_node_t *identifier,
                 const struct sockaddr *addr) {
     printf("%s\n", (char *)identifier);
+    return NULL;
 }
 
 int main(int argc, char **argv) {

@@ -69,7 +69,7 @@ bin/libgjoll.so: $(BINDIR) $(OBJDIR) $(OBJ)
 	$(CC) -shared -o $@ $(OBJ) $(LD_FLAGS) $(LD_FLAGS)
 
 $(EXEC_D): $(BINDIR) $(OBJDIR_D) $(OBJ_D) $(LIB)
-	$(CC) -o $(EXEC_D) $(OBJ_D) $(FLAGS) $(LD_FLAGS) $(LIB)
+	$(CC) -o $(EXEC_D) $(OBJ_D) $(FLAGS) $(LIB) $(LD_FLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -o $@

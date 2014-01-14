@@ -22,20 +22,6 @@
 #define GJOLL_NONCE_LEN 8
 
 /*
- * Length of a gjoll shared secret, in bytes.
- */
-#define GJOLL_SECRET_LEN 32
-
-/*
- * Contains a shared secret of fixed length - it is preferred to use this to
- * store shared secrets as it's more efficient than a general purpose buffer
- * such as gjoll_buf_t (as the shared secret is accessed for every packet).
- */
-typedef struct {
-    unsigned char secret[GJOLL_SECRET_LEN];
-} gjoll_secret_t;
-
-/*
  * Preprocesses an arbitrary long shared secret in a gjoll secret, of finite
  * length, for use in the gjoll cryptography layer.
  *

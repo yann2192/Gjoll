@@ -58,11 +58,25 @@ extern "C" {
 #define GJOLL_HEADER_MIN_LENGTH 42
 #define GJOLL_MAX_DATA_LENGTH (536 - 42)
 
+/*
+ * Length of a gjoll shared secret, in bytes.
+ */
+#define GJOLL_SECRET_LEN 32
+
 #define OFFSET(p, i) ((unsigned char *)p + i)
 
 /* types */
 typedef uint64_t gjoll_node_t;
 typedef uint16_t gjoll_service_t;
+
+/*
+ * Contains a shared secret of fixed length - it is preferred to use this to
+ * store shared secrets as it's more efficient than a general purpose buffer
+ * such as gjoll_buf_t (as the shared secret is accessed for every packet).
+ */
+typedef struct {
+    unsigned char secret[GJOLL_SECRET_LEN];
+} gjoll_secret_t;
 
 typedef struct {
     void *data;
@@ -91,12 +105,15 @@ GJOLL_EXTERN void gjoll_delete(gjoll_loop_t *gloop);
 GJOLL_EXTERN int gjoll_run(gjoll_loop_t gloop);
 
 typedef struct gjoll_connection_s gjoll_connection_t;
+typedef struct gjoll_session_s gjoll_session_t;
 
-typedef void (*gjoll_session_cb) (const gjoll_connection_t *gconn,
-                                  void *identifier,
-                                  const struct sockaddr *addr);
+typedef gjoll_session_t* (*gjoll_session_cb) (const gjoll_connection_t *gconn,
+                                              const gjoll_node_t *identifier,
+                                              const struct sockaddr *addr);
 
 struct gjoll_connection_s {
+    void *data;
+    gjoll_loop_t gloop;
     uv_udp_t sock;
     gjoll_session_cb gs_cb;
 };
@@ -113,23 +130,22 @@ GJOLL_EXTERN int gjoll_bind_connection(gjoll_connection_t *gconn,
 GJOLL_EXTERN int gjoll_up_connection(gjoll_connection_t *gconn,
                                      gjoll_session_cb gs_cb);
 
-typedef struct gjoll_session_s gjoll_session_t;
-
 typedef void (*gjoll_recv_cb) (const gjoll_session_t *session,
                                gjoll_buf_t buf);
 
 struct gjoll_session_s {
+    void *data;
     gjoll_connection_t *conn;
     const struct sockaddr *addr;
-    const void *identifier;
-    const void *shared;
+    gjoll_node_t identifier;
+    gjoll_secret_t secret;
     gjoll_recv_cb recv_cb;
 };
 
 GJOLL_EXTERN int gjoll_new_session(gjoll_connection_t *gconn,
                                    gjoll_session_t *session,
                                    const struct sockaddr *addr,
-                                   const void *identifier,
+                                   gjoll_node_t identifier,
                                    const void *shared,
                                    const size_t shared_len,
                                    gjoll_recv_cb recv_cb);
