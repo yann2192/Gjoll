@@ -107,7 +107,7 @@ GJOLL_EXTERN int gjoll_run(gjoll_loop_t gloop);
 typedef struct gjoll_connection_s gjoll_connection_t;
 typedef struct gjoll_session_s gjoll_session_t;
 
-typedef gjoll_session_t* (*gjoll_session_cb) (const gjoll_connection_t *gconn,
+typedef gjoll_session_t* (*gjoll_session_cb) (gjoll_connection_t *gconn,
                                               const gjoll_node_t *identifier,
                                               const struct sockaddr *addr);
 

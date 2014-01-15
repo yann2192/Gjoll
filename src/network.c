@@ -48,8 +48,9 @@ void gjoll__post_session_cb(uv_work_t *req, int status) {
     gjoll__work_session_t *ws = (gjoll__work_session_t *)req->data;
     if(ws->session != NULL) {
         ws->session->recv_cb(ws->session, uv_to_gjoll(ws->buf));
+    } else {
+        free(ws->buf.base);
     }
-    /* TODO: work here */
     free(ws);
 }
 
@@ -65,14 +66,18 @@ void gjoll__alloc_cb(uv_handle_t *handle, size_t suggested_size,
 
 void gjoll__recv_cb(uv_udp_t *handle, ssize_t nread, const uv_buf_t* buf,
                     const struct sockaddr *addr, unsigned flag) {
-    if(nread < 0) {
+    gjoll__work_session_t *ws;
+
+    if(nread <= 0) {
         /* error */
+        free(buf->base);
         return;
     }
     /* TODO: Reject packet if nread < GJOLL_HEADER_MIN_LENGTH */
-    gjoll__work_session_t *ws = malloc(sizeof(gjoll__work_session_t));
+    ws = malloc(sizeof(gjoll__work_session_t));
     if(ws == NULL) {
         /* error */
+        free(buf->base);
         return;
     }
     ws->gconn = (gjoll_connection_t *)handle->data;
@@ -138,6 +143,7 @@ int gjoll_send(const gjoll_session_t *session, void *data, size_t len) {
     buf->base = data;
     buf->len = len;
     /* NOTE: add send_cb to release memory */
+    /* TODO: encrypt in threadpool */
     return uv_udp_send(&req, &(session->conn->sock), buf, 1, session->addr,
                        NULL);
 }
