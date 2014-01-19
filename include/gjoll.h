@@ -109,6 +109,7 @@ typedef struct gjoll_session_s gjoll_session_t;
 
 typedef gjoll_session_t* (*gjoll_session_cb) (gjoll_connection_t *gconn,
                                               const gjoll_node_t *identifier,
+                                              const gjoll_service_t *service_id,
                                               const struct sockaddr *addr);
 
 struct gjoll_connection_s {
@@ -138,6 +139,7 @@ struct gjoll_session_s {
     gjoll_connection_t *conn;
     const struct sockaddr *addr;
     gjoll_node_t identifier;
+    gjoll_service_t service_id;
     gjoll_secret_t secret;
     gjoll_recv_cb recv_cb;
 };
@@ -146,6 +148,7 @@ GJOLL_EXTERN int gjoll_new_session(gjoll_connection_t *gconn,
                                    gjoll_session_t *session,
                                    const struct sockaddr *addr,
                                    gjoll_node_t identifier,
+                                   gjoll_service_t service_id,
                                    const void *shared,
                                    const size_t shared_len,
                                    gjoll_recv_cb recv_cb);

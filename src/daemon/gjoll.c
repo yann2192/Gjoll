@@ -17,13 +17,14 @@ void recv_cb(const gjoll_session_t *session,
 
 gjoll_session_t *session_cb(gjoll_connection_t *gconn,
                 const gjoll_node_t *identifier,
+                const gjoll_service_t *service_id,
                 const struct sockaddr *addr) {
     printf("%d\n", (int)*identifier);
     if(session == NULL) {
         session = malloc(sizeof(gjoll_session_t));
         if(session == NULL)
             return NULL;
-        if(gjoll_new_session(gconn, session, addr, *identifier,
+        if(gjoll_new_session(gconn, session, addr, *identifier, *service_id,
                              "secretkey", 9, recv_cb)) {
             free(session);
             session = NULL;
@@ -41,6 +42,7 @@ int main(int argc, char **argv) {
     uv_signal_t s1;
     gjoll_connection_t conn;
     gjoll_loop_t loop;
+    struct sockaddr_in bind_addr;
 
     ordo_init();
     if(gjoll_init(&loop)) {
@@ -56,7 +58,6 @@ int main(int argc, char **argv) {
         fprintf(stderr, "gjoll_new_connection failed\n");
         return 1;
     }
-    struct sockaddr_in bind_addr;
     if(uv_ip4_addr("0.0.0.0", 9999, &bind_addr)) {
         fprintf(stderr, "uv_ip4_addr failed\n");
         return 1;

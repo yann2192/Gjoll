@@ -38,8 +38,10 @@ typedef struct {
 void gjoll__pre_session_cb(uv_work_t *req) {
     gjoll__work_session_t *ws = (gjoll__work_session_t *)req->data;
     /* TODO: parse ws->buf to retrieve gjoll_node_t */
+    /* TODO: parse ws->buf to retrieve gjoll_service_t */
     ws->session = ws->gconn->gs_cb(ws->gconn,
                                    (gjoll_node_t*) ws->buf.base,
+                                   (gjoll_service_t*) ws->buf.base,
                                    ws->addr);
     /* TODO: decrypt here */
 }
@@ -121,12 +123,14 @@ int gjoll_new_session(gjoll_connection_t *gconn,
                       gjoll_session_t *session,
                       const struct sockaddr *addr,
                       gjoll_node_t identifier,
+                      gjoll_service_t service_id,
                       const void *shared,
                       const size_t shared_len,
                       gjoll_recv_cb recv_cb) {
     session->conn = gconn;
     session->addr = addr;
     session->identifier = identifier;
+    session->service_id = service_id;
     if(gjoll_preprocess_secret(shared, shared_len, &(session->secret))) {
         return -1;
     }
