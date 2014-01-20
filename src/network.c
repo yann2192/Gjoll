@@ -38,10 +38,8 @@ typedef struct {
 void gjoll__pre_session_cb(uv_work_t *req) {
     gjoll__work_session_t *ws = (gjoll__work_session_t *)req->data;
     /* TODO: parse ws->buf to retrieve gjoll_node_t */
-    /* TODO: parse ws->buf to retrieve gjoll_service_t */
     ws->session = ws->gconn->gs_cb(ws->gconn,
-                                   (gjoll_node_t*) ws->buf.base,
-                                   (gjoll_service_t*) ws->buf.base,
+                                   (gjoll_node_t *) ws->buf.base,
                                    ws->addr);
     /* TODO: decrypt here */
 }
@@ -49,7 +47,9 @@ void gjoll__pre_session_cb(uv_work_t *req) {
 void gjoll__post_session_cb(uv_work_t *req, int status) {
     gjoll__work_session_t *ws = (gjoll__work_session_t *)req->data;
     if(ws->session != NULL) {
-        ws->session->recv_cb(ws->session, uv_to_gjoll(ws->buf));
+        ws->session->recv_cb(ws->session,
+                             (gjoll_service_t *) ws->buf.base,
+                             uv_to_gjoll(ws->buf));
     } else {
         free(ws->buf.base);
     }
@@ -123,14 +123,12 @@ int gjoll_new_session(gjoll_connection_t *gconn,
                       gjoll_session_t *session,
                       const struct sockaddr *addr,
                       gjoll_node_t identifier,
-                      gjoll_service_t service_id,
                       const void *shared,
                       const size_t shared_len,
                       gjoll_recv_cb recv_cb) {
     session->conn = gconn;
     session->addr = addr;
     session->identifier = identifier;
-    session->service_id = service_id;
     if(gjoll_preprocess_secret(shared, shared_len, &(session->secret))) {
         return -1;
     }
@@ -138,7 +136,8 @@ int gjoll_new_session(gjoll_connection_t *gconn,
     return 0;
 }
 
-int gjoll_send(const gjoll_session_t *session, void *data, size_t len) {
+int gjoll_send(const gjoll_session_t *session, const gjoll_service_t service,
+               void *data, size_t len) {
     uv_udp_send_t req;
     uv_buf_t *buf = malloc(sizeof(uv_buf_t));
     if(buf == NULL) {

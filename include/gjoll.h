@@ -109,7 +109,6 @@ typedef struct gjoll_session_s gjoll_session_t;
 
 typedef gjoll_session_t* (*gjoll_session_cb) (gjoll_connection_t *gconn,
                                               const gjoll_node_t *identifier,
-                                              const gjoll_service_t *service_id,
                                               const struct sockaddr *addr);
 
 struct gjoll_connection_s {
@@ -132,6 +131,7 @@ GJOLL_EXTERN int gjoll_up_connection(gjoll_connection_t *gconn,
                                      gjoll_session_cb gs_cb);
 
 typedef void (*gjoll_recv_cb) (const gjoll_session_t *session,
+                               const gjoll_service_t *service,
                                gjoll_buf_t buf);
 
 struct gjoll_session_s {
@@ -139,7 +139,6 @@ struct gjoll_session_s {
     gjoll_connection_t *conn;
     const struct sockaddr *addr;
     gjoll_node_t identifier;
-    gjoll_service_t service_id;
     gjoll_secret_t secret;
     gjoll_recv_cb recv_cb;
 };
@@ -148,12 +147,13 @@ GJOLL_EXTERN int gjoll_new_session(gjoll_connection_t *gconn,
                                    gjoll_session_t *session,
                                    const struct sockaddr *addr,
                                    gjoll_node_t identifier,
-                                   gjoll_service_t service_id,
                                    const void *shared,
                                    const size_t shared_len,
                                    gjoll_recv_cb recv_cb);
 
-GJOLL_EXTERN int gjoll_send(const gjoll_session_t *session, void *data,
+GJOLL_EXTERN int gjoll_send(const gjoll_session_t *session,
+                            const gjoll_service_t service,
+                            void *data,
                             size_t len);
 
 #ifdef __cplusplus

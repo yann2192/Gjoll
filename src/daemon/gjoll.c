@@ -10,6 +10,7 @@
 gjoll_session_t *session = NULL;
 
 void recv_cb(const gjoll_session_t *session,
+             const gjoll_service_t *service,
              gjoll_buf_t buf) {
     printf("%s\n", (char *)buf.data);
     free(buf.data);
@@ -17,14 +18,13 @@ void recv_cb(const gjoll_session_t *session,
 
 gjoll_session_t *session_cb(gjoll_connection_t *gconn,
                 const gjoll_node_t *identifier,
-                const gjoll_service_t *service_id,
                 const struct sockaddr *addr) {
     printf("%d\n", (int)*identifier);
     if(session == NULL) {
         session = malloc(sizeof(gjoll_session_t));
         if(session == NULL)
             return NULL;
-        if(gjoll_new_session(gconn, session, addr, *identifier, *service_id,
+        if(gjoll_new_session(gconn, session, addr, *identifier,
                              "secretkey", 9, recv_cb)) {
             free(session);
             session = NULL;
