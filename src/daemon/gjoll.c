@@ -9,11 +9,22 @@
 
 gjoll_session_t *session = NULL;
 
+void send_cb(gjoll_send_t *req, int status) {
+    free(req);
+}
+
 void recv_cb(const gjoll_session_t *session,
-             const gjoll_service_t *service,
+             gjoll_service_t service,
              gjoll_buf_t buf) {
-    printf("%s\n", (char *)buf.data);
-    free(buf.data);
+    gjoll_send_t *req = malloc(sizeof(gjoll_send_t));
+    printf("%s\n", (char *)buf.base);
+    free(buf.base);
+    if(req == NULL) {
+        return;
+    }
+    if(gjoll_send(req, session, service, "test", 4, send_cb)) {
+        return;
+    }
 }
 
 gjoll_session_t *session_cb(gjoll_connection_t *gconn,

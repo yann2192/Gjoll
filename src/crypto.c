@@ -34,7 +34,7 @@ int gjoll_encrypt_packet(gjoll_secret_t secret,
 
     /* Allocate the packet buffer as large as required. */
     packet->len = GJOLL_HEADER_MIN_LENGTH + data.len;
-    if (!(packet->data = malloc(packet->len))) goto error;
+    if (!(packet->base = malloc(packet->len))) goto error;
 
     /* Generate a new nonce as needed, or use the provided one. */
     if (!nonce) os_random(transit_nonce, sizeof(transit_nonce));
@@ -49,29 +49,29 @@ int gjoll_encrypt_packet(gjoll_secret_t secret,
     if (enc_block_init(ctx, key, 32, zero_iv, 16, 1, 0, 0)) goto error;
 
     /* Copy the transit nonce and the source node into the packet. */
-    memcpy(OFFSET(packet->data, 0), transit_nonce, sizeof(transit_nonce));
-    memcpy(OFFSET(packet->data, 8), &header.src,   sizeof(header.src));
+    memcpy(OFFSET(packet->base, 0), transit_nonce, sizeof(transit_nonce));
+    memcpy(OFFSET(packet->base, 8), &header.src,   sizeof(header.src));
 
     /* Encrypt the dst node and the serviceID into the right packet offset. */
-    enc_block_update(ctx, &header.dst,        8, OFFSET(packet->data, 16), 0);
-    enc_block_update(ctx, &header.id ,        2, OFFSET(packet->data, 24), 0);
-    enc_block_update(ctx,  data.data , data.len, OFFSET(packet->data, 42), 0);
+    enc_block_update(ctx, &header.dst,        8, OFFSET(packet->base, 16), 0);
+    enc_block_update(ctx, &header.id ,        2, OFFSET(packet->base, 24), 0);
+    enc_block_update(ctx,  data.base , data.len, OFFSET(packet->base, 42), 0);
     enc_block_final(ctx, 0, 0);
     enc_block_free(ctx);
 
     /* Calculate the packet fingerprint. */
     if (!(h_ctx = hmac_alloc(sha256()))) goto error;
     if (hmac_init(h_ctx, key, sizeof(key), 0)) goto error;
-    hmac_update(h_ctx, OFFSET(packet->data,  0), 26);
-    hmac_update(h_ctx, OFFSET(packet->data, 42), packet->len - 42);
+    hmac_update(h_ctx, OFFSET(packet->base,  0), 26);
+    hmac_update(h_ctx, OFFSET(packet->base, 42), packet->len - 42);
     hmac_final(h_ctx,  fingerprint);
-    memcpy(OFFSET(packet->data, 26), fingerprint, 16); // truncate fingerprint
+    memcpy(OFFSET(packet->base, 26), fingerprint, 16); // truncate fingerprint
     hmac_free(h_ctx);
 
     return 0;
 
 error:
-    if (packet->data) free(packet->data);
+    if (packet->base) free(packet->base);
     if (ctx) enc_block_free(ctx);
     if (h_ctx) hmac_free(h_ctx);
     return 1;
@@ -88,25 +88,25 @@ int gjoll_decrypt_header(gjoll_secret_t  secret,
     unsigned char fingerprint[32];
     unsigned char key[32];
 
-    memcpy(nonce, OFFSET(packet.data, 0), sizeof(nonce));
-    memcpy(&header->src, OFFSET(packet.data, 8), sizeof(header->src));
+    memcpy(nonce, OFFSET(packet.base, 0), sizeof(nonce));
+    memcpy(&header->src, OFFSET(packet.base, 8), sizeof(header->src));
 
     if (ordo_hmac(sha256(), 0, secret.secret, GJOLL_SECRET_LEN,
                   nonce, sizeof(nonce), key)) goto error;
 
     if (!(h_ctx = hmac_alloc(sha256()))) goto error;
     if (hmac_init(h_ctx, key, sizeof(key), 0)) goto error;
-    hmac_update(h_ctx, OFFSET(packet.data,  0), 26);
-    hmac_update(h_ctx, OFFSET(packet.data, 42), packet.len - 42);
+    hmac_update(h_ctx, OFFSET(packet.base,  0), 26);
+    hmac_update(h_ctx, OFFSET(packet.base, 42), packet.len - 42);
     hmac_final(h_ctx,  fingerprint);
     hmac_free(h_ctx);
 
-    if (memcmp(fingerprint, OFFSET(packet.data, 26), 16) != 0) return 1; // invalid fingerprint
+    if (memcmp(fingerprint, OFFSET(packet.base, 26), 16) != 0) return 1; // invalid fingerprint
 
     if (!(ctx = enc_block_alloc(aes(), ctr()))) goto error; // TODO: replace with threefish256 after
     if (enc_block_init(ctx, key, 32, zero_iv, 16, 1, 0, 0)) goto error;
-    enc_block_update(ctx, OFFSET(packet.data, 16),        8, &header->dst, 0);
-    enc_block_update(ctx, OFFSET(packet.data, 24) ,        2, &header->id, 0);
+    enc_block_update(ctx, OFFSET(packet.base, 16),        8, &header->dst, 0);
+    enc_block_update(ctx, OFFSET(packet.base, 24) ,        2, &header->id, 0);
 
     // src/dst/id back to host
     header->src = be64toh_(header->src);
@@ -131,10 +131,10 @@ int gjoll_decrypt_data(gjoll_secret_t secret,
 
     if (!data) goto error;
     data->len = packet.len - 42;
-    data->data = malloc(data->len);
-    if (!data->data) goto error;
+    data->base = malloc(data->len);
+    if (!data->base) goto error;
 
-    enc_block_update(ctx, OFFSET(packet.data, 42), data->len, data->data, 0);
+    enc_block_update(ctx, OFFSET(packet.base, 42), data->len, data->base, 0);
 
     return 0;
 

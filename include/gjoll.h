@@ -79,7 +79,7 @@ typedef struct {
 } gjoll_secret_t;
 
 typedef struct {
-    void *data;
+    void *base;
     size_t len;
 } gjoll_buf_t;
 
@@ -106,6 +106,7 @@ GJOLL_EXTERN int gjoll_run(gjoll_loop_t gloop);
 
 typedef struct gjoll_connection_s gjoll_connection_t;
 typedef struct gjoll_session_s gjoll_session_t;
+typedef struct gjoll_send_s gjoll_send_t;
 
 typedef gjoll_session_t* (*gjoll_session_cb) (gjoll_connection_t *gconn,
                                               const gjoll_node_t *identifier,
@@ -131,7 +132,7 @@ GJOLL_EXTERN int gjoll_up_connection(gjoll_connection_t *gconn,
                                      gjoll_session_cb gs_cb);
 
 typedef void (*gjoll_recv_cb) (const gjoll_session_t *session,
-                               const gjoll_service_t *service,
+                               gjoll_service_t service,
                                gjoll_buf_t buf);
 
 struct gjoll_session_s {
@@ -151,10 +152,22 @@ GJOLL_EXTERN int gjoll_new_session(gjoll_connection_t *gconn,
                                    const size_t shared_len,
                                    gjoll_recv_cb recv_cb);
 
-GJOLL_EXTERN int gjoll_send(const gjoll_session_t *session,
+typedef void (*gjoll_send_cb) (gjoll_send_t *req, int status);
+
+struct gjoll_send_s {
+    void *data;
+    uv_udp_send_t req;
+    gjoll_buf_t buf;
+    gjoll_buf_t ciphertext;
+    gjoll_send_cb cb;
+};
+
+GJOLL_EXTERN int gjoll_send(gjoll_send_t *req,
+                            const gjoll_session_t *session,
                             const gjoll_service_t service,
                             void *data,
-                            size_t len);
+                            size_t len,
+                            gjoll_send_cb cb);
 
 #ifdef __cplusplus
 }
