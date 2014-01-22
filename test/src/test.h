@@ -9,7 +9,8 @@
 
 int tests_run;
 
-char* header_tests();
+char* buf_tests();
 char* crypto_tests();
+char* network_tests();
 
 #endif
