@@ -134,7 +134,7 @@ GJOLL_EXTERN int gjoll_up_connection(gjoll_connection_t *gconn,
                                      gjoll_session_cb gs_cb);
 
 typedef void (*gjoll_recv_cb) (const gjoll_session_t *session,
-                               gjoll_service_t service,
+                               gjoll_header_t header,
                                gjoll_buf_t buf);
 
 struct gjoll_session_s {

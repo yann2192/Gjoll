@@ -13,12 +13,14 @@ void send_cb(gjoll_send_t *req, int status) {
 }
 
 void recv_cb(const gjoll_session_t *session,
-             gjoll_service_t service,
+             gjoll_header_t header,
              gjoll_buf_t buf) {
     char str[buf.len+1];
     memcpy(str, buf.base, buf.len);
     str[buf.len] = 0;
-    printf("service: %d\n", service);
+    printf("service: %d\n", header.id);
+    printf("src: %ld\n", header.src);
+    printf("dst: %ld\n", header.dst);
     printf("data: %s\n", str);
     free(buf.base);
 }

@@ -80,7 +80,7 @@ void gjoll__post_session_cb(uv_work_t *req, int status) {
     if(!ws->status) {
         if(ws->session != NULL) {
             ws->session->recv_cb(ws->session,
-                                ws->header.id,
+                                ws->header,
                                 ws->buf);
         } else {
             free(ws->buf.base);
