@@ -11,6 +11,8 @@
 #include "crypto.h"
 #include "buf.h"
 
+#include "ordo/internal/sys.h"
+
 
 int gjoll_init(gjoll_loop_t *gloop) {
     gloop->loop = uv_loop_new();
@@ -41,12 +43,14 @@ void gjoll__pre_session_cb(uv_work_t *req) {
     void *ctx;
     gjoll_buf_t plaintext;
     gjoll_header_t header;
+    gjoll_node_t src;
     gjoll__work_session_t *ws = (gjoll__work_session_t *)req->data;
-    /* TODO: parse ws->buf to retrieve gjoll_node_t */
-    ws->session = ws->gconn->gs_cb(ws->gconn,
-                                   (gjoll_node_t *) ws->buf.base,
-                                   ws->addr);
+
+    src = *(gjoll_node_t *)(((char *)ws->buf.base)+8);
+    src = be64toh_(src);
+    ws->session = ws->gconn->gs_cb(ws->gconn, src, ws->addr);
     if(ws->session != NULL) {
+        /* TODO: merge decrypt_header and decrypt_data */
         if(gjoll_decrypt_header(ws->session->secret,
                                 ws->buf,
                                 &header,
@@ -55,9 +59,9 @@ void gjoll__pre_session_cb(uv_work_t *req) {
             goto err;
         }
         if(gjoll_decrypt_data(ws->session->secret,
-                                ws->buf,
-                                &plaintext,
-                                &ctx)) {
+                              ws->buf,
+                              &plaintext,
+                              ctx)) {
             /* error */
             goto err;
         }
@@ -123,9 +127,11 @@ void gjoll__recv_cb(uv_udp_t *handle, ssize_t nread, const uv_buf_t* buf,
 }
 
 int gjoll_new_connection(gjoll_loop_t gloop,
+                         gjoll_node_t id,
                          gjoll_connection_t *gconn) {
     gconn->sock.data = NULL;
     gconn->gloop = gloop;
+    gconn->identifier = id;
     return uv_udp_init(gloop.loop, &(gconn->sock));
 }
 
@@ -168,7 +174,8 @@ int gjoll_new_session(gjoll_connection_t *gconn,
 
 void gjoll__send_cb(uv_udp_send_t *req, int status) {
     gjoll_send_t *greq = (gjoll_send_t *)req->data;
-    free(greq->ciphertext.base);
+    if(status == 0)
+        free(greq->ciphertext.base);
     if(greq->cb != NULL) {
         greq->cb(greq, greq->status);
     }
@@ -184,22 +191,28 @@ typedef struct {
 /* Launch in threadpool */
 void gjoll__pre_encrypt_cb(uv_work_t *req) {
     gjoll_header_t header;
+    gjoll_buf_t ciphertext;
     gjoll__work_encrypt_t *we = (gjoll__work_encrypt_t *)req->data;
+    header.src = we->session->conn->identifier;
     header.dst = we->session->identifier;
     header.id = we->service;
     if(gjoll_encrypt_packet(we->session->secret, header, we->greq->buf,
-                            &(we->greq->ciphertext), NULL)) {
+                            &ciphertext, NULL)) {
         /* error */
         we->greq->status = -1;
     }
+    we->greq->ciphertext = gjoll_to_uv(ciphertext);
 }
 
 void gjoll__post_encrypt_cb(uv_work_t *req, int status) {
     gjoll__work_encrypt_t *we = (gjoll__work_encrypt_t *)req->data;
-    /* NOTE: gjoll_buf_t to uv_buf_t cast, need check if it work */
-    uv_udp_send(&(we->greq->req), &(we->session->conn->sock),
-                (uv_buf_t *)&(we->greq->ciphertext), 1,
-                we->session->addr, gjoll__send_cb);
+    if(we->greq->status) {
+        we->greq->cb(we->greq, we->greq->status);
+    } else {
+        uv_udp_send(&(we->greq->req), &(we->session->conn->sock),
+                    &(we->greq->ciphertext), 1,
+                    we->session->addr, gjoll__send_cb);
+    }
     free(we);
 }
 
@@ -213,9 +226,11 @@ int gjoll_send(gjoll_send_t *req, const gjoll_session_t *session,
     req->buf.len = len;
     req->cb = cb;
     req->status = 0;
+    req->req.data = req;
     we->greq = req;
     we->session = session;
     we->service = service;
+    we->req.data = we;
     uv_queue_work(session->conn->gloop.loop, &(we->req),
                   gjoll__pre_encrypt_cb,
                   gjoll__post_encrypt_cb);

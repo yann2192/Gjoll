@@ -10,33 +10,29 @@
 gjoll_session_t *session = NULL;
 
 void send_cb(gjoll_send_t *req, int status) {
-    free(req);
 }
 
 void recv_cb(const gjoll_session_t *session,
              gjoll_service_t service,
              gjoll_buf_t buf) {
-    gjoll_send_t *req = malloc(sizeof(gjoll_send_t));
-    printf("%s\n", (char *)buf.base);
+    char str[buf.len+1];
+    memcpy(str, buf.base, buf.len);
+    str[buf.len] = 0;
+    printf("service: %d\n", service);
+    printf("data: %s\n", str);
     free(buf.base);
-    if(req == NULL) {
-        return;
-    }
-    if(gjoll_send(req, session, service, "test", 4, send_cb)) {
-        return;
-    }
 }
 
 gjoll_session_t *session_cb(gjoll_connection_t *gconn,
-                const gjoll_node_t *identifier,
+                gjoll_node_t src,
                 const struct sockaddr *addr) {
-    printf("%d\n", (int)*identifier);
+    printf("src: %ld\n", src);
     if(session == NULL) {
         session = malloc(sizeof(gjoll_session_t));
         if(session == NULL)
             return NULL;
-        if(gjoll_new_session(gconn, session, addr, *identifier,
-                             "secretkey", 9, recv_cb)) {
+        if(gjoll_new_session(gconn, session, addr, src, "secretkey", 9,
+                             recv_cb)) {
             free(session);
             session = NULL;
             return NULL;
@@ -52,8 +48,15 @@ void signal_handler(uv_signal_t *s, int signum) {
 int main(int argc, char **argv) {
     uv_signal_t s1;
     gjoll_connection_t conn;
+    gjoll_node_t myid = 888;
     gjoll_loop_t loop;
     struct sockaddr_in bind_addr;
+    /* --- send test */
+    gjoll_session_t tsession;
+    gjoll_node_t id = 666;
+    gjoll_send_t req;
+    gjoll_service_t service = 1234;
+    /* --- */
 
     ordo_init();
     if(gjoll_init(&loop)) {
@@ -65,7 +68,7 @@ int main(int argc, char **argv) {
     uv_signal_init(loop.loop, &s1);
     uv_signal_start(&s1, signal_handler, SIGINT);
 
-    if(gjoll_new_connection(loop, &conn)) {
+    if(gjoll_new_connection(loop, myid, &conn)) {
         fprintf(stderr, "gjoll_new_connection failed\n");
         return 1;
     }
@@ -81,6 +84,11 @@ int main(int argc, char **argv) {
         fprintf(stderr, "gjoll_ready_connection failed\n");
         return 1;
     }
+    /* --- send test */
+    gjoll_new_session(&conn, &tsession, (const struct sockaddr*) &bind_addr,
+                    id, "secretkey", 9, recv_cb);
+    gjoll_send(&req, &tsession, service, "test", 4, send_cb);
+    /* --- */
     gjoll_run(loop);
     gjoll_delete(&loop);
     if(session != NULL)

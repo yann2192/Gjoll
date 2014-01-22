@@ -109,17 +109,19 @@ typedef struct gjoll_session_s gjoll_session_t;
 typedef struct gjoll_send_s gjoll_send_t;
 
 typedef gjoll_session_t* (*gjoll_session_cb) (gjoll_connection_t *gconn,
-                                              const gjoll_node_t *identifier,
+                                              gjoll_node_t src,
                                               const struct sockaddr *addr);
 
 struct gjoll_connection_s {
     void *data;
     gjoll_loop_t gloop;
     uv_udp_t sock;
+    gjoll_node_t identifier;
     gjoll_session_cb gs_cb;
 };
 
 GJOLL_EXTERN int gjoll_new_connection(gjoll_loop_t gloop,
+                                      gjoll_node_t id,
                                       gjoll_connection_t *gconn);
 
 GJOLL_EXTERN void gjoll_close_connection(gjoll_connection_t *gconn);
@@ -159,7 +161,7 @@ struct gjoll_send_s {
     void *data;
     uv_udp_send_t req;
     gjoll_buf_t buf;
-    gjoll_buf_t ciphertext;
+    uv_buf_t ciphertext;
     gjoll_send_cb cb;
     int status;
 };

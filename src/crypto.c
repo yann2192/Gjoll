@@ -136,6 +136,9 @@ int gjoll_decrypt_data(gjoll_secret_t secret,
 
     enc_block_update(ctx, OFFSET(packet.base, 42), data->len, data->base, 0);
 
+    enc_block_final(ctx, 0, 0);
+    enc_block_free(ctx);
+
     return 0;
 
 error:
