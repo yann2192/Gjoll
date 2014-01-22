@@ -152,6 +152,7 @@ GJOLL_EXTERN int gjoll_new_session(gjoll_connection_t *gconn,
                                    const size_t shared_len,
                                    gjoll_recv_cb recv_cb);
 
+/* if status != 0, error */
 typedef void (*gjoll_send_cb) (gjoll_send_t *req, int status);
 
 struct gjoll_send_s {
@@ -160,6 +161,7 @@ struct gjoll_send_s {
     gjoll_buf_t buf;
     gjoll_buf_t ciphertext;
     gjoll_send_cb cb;
+    int status;
 };
 
 GJOLL_EXTERN int gjoll_send(gjoll_send_t *req,
