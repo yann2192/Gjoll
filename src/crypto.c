@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "ordo.h"
-#include "ordo/internal/sys.h"
+#include "ordo/misc/endianness.h"
 
 /* This is thread-safe, since it is read-only. */
 static const unsigned char zero_iv[GJOLL_IV_LEN];
@@ -28,9 +28,9 @@ int gjoll_encrypt_packet(gjoll_secret_t secret,
     unsigned char key[32];
 
     /* Convert the header fields to big endian for transport. */
-    header.src = htobe64_(header.src);
-    header.dst = htobe64_(header.dst);
-    header.id  = htobe16_(header.id);
+    header.src = tobe64(header.src);
+    header.dst = tobe64(header.dst);
+    header.id  = tobe16(header.id);
 
     /* Allocate the packet buffer as large as required. */
     packet->len = GJOLL_HEADER_MIN_LENGTH + data.len;
@@ -109,9 +109,9 @@ int gjoll_decrypt_header(gjoll_secret_t  secret,
     enc_block_update(ctx, OFFSET(packet.base, 24) ,        2, &header->id, 0);
 
     // src/dst/id back to host
-    header->src = be64toh_(header->src);
-    header->dst = be64toh_(header->dst);
-    header->id  = be16toh_(header->id);
+    header->src = fmbe64(header->src);
+    header->dst = fmbe64(header->dst);
+    header->id  = fmbe16(header->id);
 
     *enc_ctx = ctx;
     return 0;
@@ -128,6 +128,7 @@ int gjoll_decrypt_data(gjoll_secret_t secret,
                        void          *enc_ctx)
 {
     struct ENC_BLOCK_CTX *ctx = (struct ENC_BLOCK_CTX*)enc_ctx;
+    int err = 1;
 
     if (!data) goto error;
     data->len = packet.len - 42;
@@ -135,14 +136,10 @@ int gjoll_decrypt_data(gjoll_secret_t secret,
     if (!data->base) goto error;
 
     enc_block_update(ctx, OFFSET(packet.base, 42), data->len, data->base, 0);
-
-    enc_block_final(ctx, 0, 0);
-    enc_block_free(ctx);
-
-    return 0;
+    err = 0; // success
 
 error:
     enc_block_final(ctx, 0, 0);
     enc_block_free(ctx);
-    return 1;
+    return err;
 }

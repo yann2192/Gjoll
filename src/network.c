@@ -11,7 +11,7 @@
 #include "crypto.h"
 #include "buf.h"
 
-#include "ordo/internal/sys.h"
+#include "ordo/misc/endianness.h"
 
 
 int gjoll_init(gjoll_loop_t *gloop) {
@@ -47,7 +47,7 @@ void gjoll__pre_session_cb(uv_work_t *req) {
     gjoll__work_session_t *ws = (gjoll__work_session_t *)req->data;
 
     src = *(gjoll_node_t *)(((char *)ws->buf.base)+8);
-    src = be64toh_(src);
+    src = fmbe64(src);
     ws->session = ws->gconn->gs_cb(ws->gconn, src, ws->addr);
     if(ws->session != NULL) {
         /* TODO: merge decrypt_header and decrypt_data */
