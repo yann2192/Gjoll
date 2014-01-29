@@ -60,7 +60,6 @@ int main(int argc, char **argv) {
     gjoll_service_t service = 1234;
     /* --- */
 
-    ordo_init();
     if(gjoll_init(&loop)) {
         fprintf(stderr, "gjoll_init failed\n");
         return 1;
