@@ -45,8 +45,9 @@ int gjoll_encrypt_packet(gjoll_secret_t secret,
                   transit_nonce, sizeof(transit_nonce), key)) goto error;
 
     /* Prepare the encryption context using the key and the all-zeroes IV */
-    if (!(ctx = enc_block_alloc(aes(), ctr()))) goto error; // TODO: replace with threefish256 after
-    if (enc_block_init(ctx, key, 32, zero_iv, 16, 1, 0, 0)) goto error;
+    if (!(ctx = enc_block_alloc(threefish256(), ctr()))) goto error;
+    if (enc_block_init(ctx, key, 32, zero_iv, GJOLL_IV_LEN, 1, 0, 0))
+        goto error;
 
     /* Copy the transit nonce and the source node into the packet. */
     memcpy(OFFSET(packet->base, 0), transit_nonce, sizeof(transit_nonce));
@@ -110,8 +111,9 @@ int gjoll_decrypt_packet(gjoll_secret_t  secret,
     data->base = malloc(data->len);
     if (!data->base) goto error;
 
-    if (!(ctx = enc_block_alloc(aes(), ctr()))) goto error; // TODO: replace with threefish256 after
-    if (enc_block_init(ctx, key, 32, zero_iv, 16, 1, 0, 0)) goto error;
+    if (!(ctx = enc_block_alloc(threefish256(), ctr()))) goto error;
+    if (enc_block_init(ctx, key, 32, zero_iv, GJOLL_IV_LEN, 1, 0, 0))
+        goto error;
     enc_block_update(ctx, OFFSET(packet.base, 16),        8, &header->dst, 0);
     enc_block_update(ctx, OFFSET(packet.base, 24) ,        2, &header->id, 0);
     enc_block_update(ctx, OFFSET(packet.base, 42), data->len, data->base, 0);
