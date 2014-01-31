@@ -40,7 +40,6 @@ typedef struct {
 
 /* Launch in threadpool */
 void gjoll__pre_session_cb(uv_work_t *req) {
-    void *ctx;
     gjoll_buf_t plaintext;
     gjoll_header_t header;
     gjoll_node_t src;
@@ -50,18 +49,10 @@ void gjoll__pre_session_cb(uv_work_t *req) {
     src = fmbe64(src);
     ws->session = ws->gconn->gs_cb(ws->gconn, src, ws->addr);
     if(ws->session != NULL) {
-        /* TODO: merge decrypt_header and decrypt_data */
-        if(gjoll_decrypt_header(ws->session->secret,
+        if(gjoll_decrypt_packet(ws->session->secret,
                                 ws->buf,
                                 &header,
-                                &ctx)) {
-            /* error */
-            goto err;
-        }
-        if(gjoll_decrypt_data(ws->session->secret,
-                              ws->buf,
-                              &plaintext,
-                              ctx)) {
+                                &plaintext)) {
             /* error */
             goto err;
         }
@@ -103,12 +94,11 @@ void gjoll__recv_cb(uv_udp_t *handle, ssize_t nread, const uv_buf_t* buf,
                     const struct sockaddr *addr, unsigned flag) {
     gjoll__work_session_t *ws;
 
-    if(nread <= 0) {
+    if(nread <= 0 || nread < 42) {
         /* error */
         free(buf->base);
         return;
     }
-    /* TODO: Reject packet if nread < GJOLL_HEADER_MIN_LENGTH */
     ws = malloc(sizeof(gjoll__work_session_t));
     if(ws == NULL) {
         /* error */

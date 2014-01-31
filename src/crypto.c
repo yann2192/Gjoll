@@ -77,16 +77,18 @@ error:
     return 1;
 }
 
-int gjoll_decrypt_header(gjoll_secret_t  secret,
+int gjoll_decrypt_packet(gjoll_secret_t  secret,
                          gjoll_buf_t     packet,
                          gjoll_header_t *header,
-                         void          **enc_ctx)
+                         gjoll_buf_t    *data)
 {
     struct HMAC_CTX      *h_ctx;
     struct ENC_BLOCK_CTX *ctx;
     unsigned char nonce[8];
     unsigned char fingerprint[32];
     unsigned char key[32];
+
+    if(packet.len < 42) return 1;
 
     memcpy(nonce, OFFSET(packet.base, 0), sizeof(nonce));
     memcpy(&header->src, OFFSET(packet.base, 8), sizeof(header->src));
@@ -103,43 +105,29 @@ int gjoll_decrypt_header(gjoll_secret_t  secret,
 
     if (memcmp(fingerprint, OFFSET(packet.base, 26), 16) != 0) return 1; // invalid fingerprint
 
+    if (!data) goto error;
+    data->len = packet.len - 42;
+    data->base = malloc(data->len);
+    if (!data->base) goto error;
+
     if (!(ctx = enc_block_alloc(aes(), ctr()))) goto error; // TODO: replace with threefish256 after
     if (enc_block_init(ctx, key, 32, zero_iv, 16, 1, 0, 0)) goto error;
     enc_block_update(ctx, OFFSET(packet.base, 16),        8, &header->dst, 0);
     enc_block_update(ctx, OFFSET(packet.base, 24) ,        2, &header->id, 0);
+    enc_block_update(ctx, OFFSET(packet.base, 42), data->len, data->base, 0);
+    enc_block_final(ctx, 0, 0);
+
+    enc_block_free(ctx);
 
     // src/dst/id back to host
     header->src = fmbe64(header->src);
     header->dst = fmbe64(header->dst);
     header->id  = fmbe16(header->id);
 
-    *enc_ctx = ctx;
     return 0;
 
 error:
     enc_block_free(ctx);
     hmac_free(h_ctx);
     return 1;
-}
-
-int gjoll_decrypt_data(gjoll_secret_t secret,
-                       gjoll_buf_t    packet,
-                       gjoll_buf_t   *data,
-                       void          *enc_ctx)
-{
-    struct ENC_BLOCK_CTX *ctx = (struct ENC_BLOCK_CTX*)enc_ctx;
-    int err = 1;
-
-    if (!data) goto error;
-    data->len = packet.len - 42;
-    data->base = malloc(data->len);
-    if (!data->base) goto error;
-
-    enc_block_update(ctx, OFFSET(packet.base, 42), data->len, data->base, 0);
-    err = 0; // success
-
-error:
-    enc_block_final(ctx, 0, 0);
-    enc_block_free(ctx);
-    return err;
 }

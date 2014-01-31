@@ -60,41 +60,20 @@ int gjoll_encrypt_packet(gjoll_secret_t secret,
                          const void    *nonce);
 
 /*
- * Decrypts the header contained in a packet.
+ * Decrypts the header and the data contained in a packet.
  *
  * Arguments:
  *  secret    The secret shared between the local node (you) and the router.
  *  packet    A buffer which contains the raw packet bytes.
  *  header    A buffer in which the header in the packet will be written.
- *  enc_ctx   An encryption context to pass to gjoll_decrypt_data().
+ *  data      A buffer in which the data in the packet will be written.
  *
  * Returns:
  *  0 on success, or an error code on failure.
  */
-int gjoll_decrypt_header(gjoll_secret_t  secret,
+int gjoll_decrypt_packet(gjoll_secret_t  secret,
                          gjoll_buf_t     packet,
                          gjoll_header_t *header,
-                         void          **enc_ctx);
-
-/*
- * Decrypts the data contained in a packet.
- *
- * Arguments:
- *  secret    The secret shared between the local node (you) and the router.
- *  packet    A buffer which contains the raw packet bytes.
- *  data      A buffer in which the data in the packet will be written.
- *  enc_ctx   An encryption context to obtain from gjoll_decrypt_header().
- *
- * Returns:
- *  0 on success, or an error code on failure.
- *
- * This will reuse the encryption context from gjoll_decrypt_header in order
- * to complete decryption of the data. If data is zero, the context is freed
- * without decrypting anything (so you need to call it anyway).
- */
-int gjoll_decrypt_data(gjoll_secret_t secret,
-                       gjoll_buf_t    packet,
-                       gjoll_buf_t   *data,
-                       void          *enc_ctx);
+                         gjoll_buf_t    *data);
 
 #endif

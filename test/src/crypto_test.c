@@ -42,21 +42,17 @@ static char* test__gjoll_encrypt_packet() {
 static char* test__gjoll_decrypt_packet() {
     gjoll_header_t header;
     gjoll_buf_t data;
-    void *ctx;
 
     gjoll_buf_t packet;
     packet.base = valid_packet;
     packet.len = sizeof(valid_packet);
 
-    int err = gjoll_decrypt_header(secret, packet, &header, &ctx);
+    int err = gjoll_decrypt_packet(secret, packet, &header, &data);
     mu_assert("error: misc. crypto error", err == 0);
 
     mu_assert("error: src incorrect", header.src == 0x7b8b5766931529e6ULL);
     mu_assert("error: dst incorrect", header.dst == 0xa5010113eb0a809bULL);
     mu_assert("error: id incorrect", header.id == 2000);
-
-    err = gjoll_decrypt_data(secret, packet, &data, ctx);
-    mu_assert("error: misc. crypto error", err == 0);
 
     return 0;
 }
