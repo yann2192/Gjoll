@@ -12,7 +12,7 @@ static gjoll_secret_t secret = { { 0xc1, 0xf9, 0x32, 0x06, 0x92, 0x03, 0x76, 0x9
                                    0x01, 0x09, 0xb9, 0x91, 0x59, 0x2f, 0x18, 0x93,
                                    0x13, 0x04, 0x00, 0x00, 0x44, 0x4b, 0x94, 0x30 } };
 
-// according to the initial specification (= using AES-256)
+// according to the initial specification (= using Threefish256)
 static unsigned char valid_packet[42 + 4] = { 0xbc, 0x46, 0x54, 0xef, 0xb2, 0x26, 0xc6,
                                               0xf6, 0x7b, 0x8b, 0x57, 0x66, 0x93, 0x15,
                                               0x29, 0xe6, 0xd5, 0xac, 0xd5, 0xd9, 0xae,
@@ -34,7 +34,7 @@ static char* test__gjoll_encrypt_packet() {
     gjoll_buf_t packet;
 
     int err = gjoll_encrypt_packet(secret, header, data, &packet, nonce);
-
+    
     mu_assert("error: misc. crypto error", err == 0);
     mu_assert("error: invalid packet", memcmp(packet.base, valid_packet, 46) == 0);
 
@@ -59,8 +59,40 @@ static char* test__gjoll_decrypt_packet() {
     return 0;
 }
 
+static char *test__gjoll_mutate_packet() {
+    const int trials = 100000;
+    int t;
+    
+    for (t = 0; t < trials; ++t)
+    {
+        int length = 1 + (rand() % 4);
+        int n;
+        
+        gjoll_header_t header;
+        gjoll_buf_t data;
+        
+        gjoll_buf_t packet;
+        packet.len = sizeof(valid_packet);
+        packet.base = malloc(packet.len);
+        memcpy(packet.base, valid_packet, packet.len);
+        
+        for (n = 0; n < length; ++n)
+        {
+            int p = rand() % sizeof(valid_packet);
+        
+            ((unsigned char*)packet.base)[p] += 1 + (rand() % 4);
+        }
+        
+        mu_assert("error: ill-formed packet not discarded",
+                  gjoll_decrypt_packet(secret, packet, &header, &data) != 0);
+    }
+    
+    return 0;
+}
+
 char* crypto_tests() {
     mu_run_test(test__gjoll_encrypt_packet);
     mu_run_test(test__gjoll_decrypt_packet);
+    mu_run_test(test__gjoll_mutate_packet);
     return 0;
 }
