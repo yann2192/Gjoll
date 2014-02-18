@@ -7,6 +7,7 @@
 
 #include "../src/crypto.h"
 
+#if 0
 static gjoll_secret_t secret = { { 0xc1, 0xf9, 0x32, 0x06, 0x92, 0x03, 0x76, 0x91,
                                    0x8c, 0xc0, 0x7f, 0xe0, 0x15, 0x8f, 0x6a, 0x81,
                                    0x01, 0x09, 0xb9, 0x91, 0x59, 0x2f, 0x18, 0x93,
@@ -89,10 +90,13 @@ static char *test__gjoll_mutate_packet() {
     
     return 0;
 }
+#endif
 
 char* crypto_tests() {
+    /*
     mu_run_test(test__gjoll_encrypt_packet);
     mu_run_test(test__gjoll_decrypt_packet);
     mu_run_test(test__gjoll_mutate_packet);
+    */
     return 0;
 }

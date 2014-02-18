@@ -11,6 +11,7 @@ int tests_run;
 
 char* buf_tests();
 char* crypto_tests();
+char* parser_tests();
 char* network_tests();
 
 #endif

@@ -7,7 +7,7 @@ gjoll_buf_t gjoll_buf_init(void* data, size_t len) {
     return buf;
 }
 
-void gjoll_free_buf(gjoll_buf_t* buf) {
+void gjoll_buf_free(gjoll_buf_t* buf) {
     if(buf->base != NULL) {
         free(buf->base);
         buf->base = NULL;

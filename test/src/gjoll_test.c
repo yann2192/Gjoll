@@ -16,6 +16,7 @@ static char* all_tests() {
     srand(time(0));
     mu_run(buf_tests);
     mu_run(crypto_tests);
+    mu_run(parser_tests);
     mu_run(network_tests);
     return 0;
 }
