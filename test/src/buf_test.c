@@ -14,9 +14,10 @@
 
 static char* test__gjoll_buf_init() {
     gjoll_buf_t b = gjoll_buf_init(NULL, 0);
+    char *buf_test = malloc(1024);
+
     mu_assert("error: gjoll_buf_t.base != NULL", b.base == NULL);
     mu_assert("error: gjoll_buf_t.len != 0", b.len == 0);
-    char *buf_test = malloc(1024);
     b = gjoll_buf_init(buf_test, 1024);
     mu_assert("error: gjoll_buf_t.base != buf_test", b.base == buf_test);
     mu_assert("error: gjoll_buf_t.len != 1024", b.len == 1024);
