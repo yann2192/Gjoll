@@ -95,9 +95,3 @@ void gjoll__parser_free_data(gjoll__parser_t *parser) {
         FREEDATA(parser);
     }
 }
-
-void gjoll__parser_clean(gjoll__parser_t *parser) {
-    if(parser->data.base != NULL) {
-        FREEDATA(parser);
-    }
-}

@@ -28,6 +28,4 @@ int gjoll__parser_alloc_data(gjoll__parser_t *parser, size_t len);
 
 void gjoll__parser_free_data(gjoll__parser_t *parser);
 
-void gjoll__parser_clean(gjoll__parser_t *parser);
-
 #endif

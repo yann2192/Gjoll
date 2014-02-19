@@ -213,7 +213,7 @@ static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
 
 err:
     free(buf->base);
-    gjoll__parser_clean(&(conn->parser));
+    gjoll__parser_free_data(&(conn->parser));
     gjoll_connection_close(conn);
     return;
 }
@@ -324,7 +324,7 @@ void gjoll_connection_close(gjoll_connection_t *conn) {
 void gjoll_connection_clean(gjoll_connection_t *conn) {
     gjoll_crypto_clean(&(conn->cin));
     gjoll_crypto_clean(&(conn->cout));
-    gjoll__parser_clean(&(conn->parser));
+    gjoll__parser_free_data(&(conn->parser));
 }
 
 int gjoll_send(gjoll_send_t *greq, gjoll_connection_t *conn, void *data,
