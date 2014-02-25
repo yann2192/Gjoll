@@ -1,3 +1,10 @@
+/**
+  Copyright (C) 2013 Yann GUIBET <yannguibet@gmail.com>
+  and Thomas BENETEAU <thomas.beneteau@yahoo.fr>.
+
+  See LICENSE for details.
+ **/
+
 #include "test.h"
 #include "gjoll.h"
 

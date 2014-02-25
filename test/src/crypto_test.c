@@ -35,7 +35,7 @@ static char* test__gjoll_encrypt_packet() {
     gjoll_buf_t packet;
 
     int err = gjoll_encrypt_packet(secret, header, data, &packet, nonce);
-    
+
     mu_assert("error: misc. crypto error", err == 0);
     mu_assert("error: invalid packet", memcmp(packet.base, valid_packet, 46) == 0);
 
@@ -63,31 +63,31 @@ static char* test__gjoll_decrypt_packet() {
 static char *test__gjoll_mutate_packet() {
     const int trials = 100000;
     int t;
-    
+
     for (t = 0; t < trials; ++t)
     {
         int length = 1 + (rand() % 4);
         int n;
-        
+
         gjoll_header_t header;
         gjoll_buf_t data;
-        
+
         gjoll_buf_t packet;
         packet.len = sizeof(valid_packet);
         packet.base = malloc(packet.len);
         memcpy(packet.base, valid_packet, packet.len);
-        
+
         for (n = 0; n < length; ++n)
         {
             int p = rand() % sizeof(valid_packet);
-        
+
             ((unsigned char*)packet.base)[p] += 1 + (rand() % 4);
         }
-        
+
         mu_assert("error: ill-formed packet not discarded",
                   gjoll_decrypt_packet(secret, packet, &header, &data) != 0);
     }
-    
+
     return 0;
 }
 #endif
