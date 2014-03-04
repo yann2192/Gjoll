@@ -4,3 +4,6 @@
 [submodule "ordo"]
 	path = ordo
 	url = https://github.com/TomCrypto/Ordo.git
+[submodule "uthash"]
+	path = uthash
+	url = https://github.com/troydhanson/uthash.git

@@ -7,6 +7,8 @@ SRCDIR = src
 
 LIBUV_INCLUDE = libuv/include
 ORDO_INCLUDE = ordo/include
+UTHASH_INCLUDE = uthash/src
+
 LIBUV_LIB = libuv/.libs/libuv.a
 ORDO_LIB = ordo/build/libordo_s.a
 
@@ -24,18 +26,18 @@ else
     AR ?= ar
 endif
 
-OBJDIR_D = obj/daemon
-SRCDIR_D = src/daemon
+OBJDIR_D = obj/gjoll
+SRCDIR_D = src/gjoll
 SRC_D = $(wildcard $(SRCDIR_D)/*.c)
 OBJ_D = $(notdir $(SRC_D:.c=.o))
 OBJ_D := $(addprefix $(OBJDIR_D)/, $(OBJ_D))
 EXEC_D = $(BINDIR)/gjoll
 
-all: libuv ordo lib daemon
+all: lib daemon
 
-lib: $(LIB)
+lib: libuv ordo $(LIB)
 
-daemon: $(EXEC_D)
+daemon: lib $(EXEC_D)
 
 test: lib
 	cd test && make
@@ -72,10 +74,10 @@ $(EXEC_D): $(BINDIR) $(OBJDIR_D) $(OBJ_D) $(LIB)
 	$(CC) -o $(EXEC_D) $(OBJ_D) $(FLAGS) $(LIB) $(LD_FLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -o $@
+	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -I$(UTHASH_INCLUDE) -o $@
 
 $(OBJDIR_D)/%.o: $(SRCDIR_D)/%.c
-	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -o $@
+	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -I$(UTHASH_INCLUDE) -o $@
 
 .PHONY: clean
 clean:

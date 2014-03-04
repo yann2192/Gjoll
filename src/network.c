@@ -16,13 +16,23 @@
 
 
 int gjoll_init(gjoll_loop_t *gloop) {
-    gloop->loop = uv_loop_new();
-    return gloop->loop == NULL ? -1:0;
+    gloop->loop = malloc(sizeof(uv_loop_t));
+    if(gloop->loop == NULL) {
+        return -1;
+    }
+    return uv_loop_init(gloop->loop);
 }
 
 void gjoll_delete(gjoll_loop_t *gloop) {
-    uv_loop_delete(gloop->loop);
+    uv_run(gloop->loop, UV_RUN_NOWAIT);
+    uv_loop_close(gloop->loop);
+    free(gloop->loop);
     gloop->loop = NULL;
+}
+
+
+int gjoll_run_once(gjoll_loop_t gloop) {
+    return uv_run(gloop.loop, UV_RUN_ONCE);
 }
 
 int gjoll_run(gjoll_loop_t gloop) {
@@ -50,7 +60,9 @@ int gjoll_listener_init(gjoll_loop_t gloop,
 
 static void gjoll__l_close_cb(uv_handle_t *handle) {
     gjoll_listener_t *l = (gjoll_listener_t *)handle->data;
-    l->close_cb(l);
+    if(l->close_cb != NULL) {
+        l->close_cb(l);
+    }
 }
 
 void gjoll_listener_close(gjoll_listener_t *listener,
@@ -196,8 +208,11 @@ static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
                     goto err;
                 }
                 gjoll__parser_free_data(&(conn->parser));
-                if(conn->recv_cb != NULL)
+                if(conn->recv_cb != NULL) {
                     conn->recv_cb(conn, data);
+                } else {
+                    free(data.base);
+                }
                 action = GJOLL_NONE_ACTION;
                 break;
             default:

@@ -6,6 +6,7 @@ OBJDIR = obj
 INCLUDE = ../include
 LIBUV_INCLUDE = ../libuv/include
 ORDO_INCLUDE = ../ordo/include
+UTHASH_INCLUDE = ../uthash/src
 LIBUV_LIB = ../libuv/.libs/libuv.a
 ORDO_LIB = ../ordo/build/libordo_s.a
 SRCDIR = src
@@ -29,7 +30,7 @@ $(BIN): $(OBJDIR) $(OBJ) $(LIB)
 	$(CC) -o $(BIN) $(OBJ) $(FLAGS) $(LIB) $(LD_FLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -o $@
+	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -I$(UTHASH_INCLUDE) -o $@
 
 clean:
 	rm -fr $(OBJDIR)

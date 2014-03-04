@@ -1,5 +1,5 @@
-#ifndef BUF_H
-#define BUF_H
+#ifndef GJOLL_BUF_H
+#define GJOLL_BUF_H
 
 #include "gjoll.h"
 #include "uv.h"

@@ -50,6 +50,7 @@ extern "C" {
 #include <string.h>
 
 #include "uv.h"
+#include "uthash.h"
 
 #define GJOLL_NONCE_SIZE 8
 #define GJOLL_IDENTIFIER_SIZE 8
@@ -91,6 +92,11 @@ typedef struct gjoll_listener_s gjoll_listener_t;
 typedef struct gjoll_connection_s gjoll_connection_t;
 typedef struct gjoll_session_s gjoll_session_t;
 typedef struct gjoll_send_s gjoll_send_t;
+
+typedef struct gjoll_rule_s gjoll_rule_t;
+typedef struct gjoll_friend_s gjoll_friend_t;
+typedef struct gjoll__conn_context_s gjoll__conn_context_t;
+typedef struct gjoll_daemon_s gjoll_daemon_t;
 
 typedef int (*gjoll_accept_cb) (gjoll_listener_t *);
 typedef int (*gjoll_l_close_cb) (gjoll_listener_t *);
@@ -151,7 +157,12 @@ GJOLL_EXTERN int gjoll_init(gjoll_loop_t *);
 
 GJOLL_EXTERN void gjoll_delete(gjoll_loop_t *);
 
+GJOLL_EXTERN int gjoll_run_once(gjoll_loop_t);
+
 GJOLL_EXTERN int gjoll_run(gjoll_loop_t);
+
+
+/* NETWORK PART */
 
 struct gjoll_listener_s {
     void *data;
@@ -230,6 +241,60 @@ GJOLL_EXTERN int gjoll_send(gjoll_send_t *,
                             void *data,
                             size_t len,
                             gjoll_send_cb cb);
+
+
+/* DAEMON PART */
+
+struct gjoll_rule_s {
+    gjoll_connection_t *gconn;
+    uv_tcp_t *lconn;
+
+    UT_hash_handle hh;
+};
+
+struct gjoll_friend_s {
+    gjoll_node_t id;
+    const void *shared;
+    size_t shared_len;
+
+    UT_hash_handle hh;
+};
+
+struct gjoll__conn_context_s {
+    gjoll_daemon_t *d;
+    gjoll_connection_t conn;
+
+    gjoll__conn_context_t *next, *prev;
+};
+
+struct gjoll_daemon_s {
+    gjoll_rule_t *rules;
+    gjoll_friend_t *friends;
+    gjoll__conn_context_t *ccs;
+
+    gjoll_loop_t gloop;
+    gjoll_listener_t listener;
+    gjoll_node_t id;
+};
+
+GJOLL_EXTERN int gjoll_daemon_init(gjoll_loop_t loop,
+                                   gjoll_daemon_t *d,
+                                   gjoll_node_t id,
+                                   const struct sockaddr *addr);
+
+GJOLL_EXTERN void gjoll_daemon_clean(gjoll_daemon_t *d);
+
+GJOLL_EXTERN gjoll_friend_t *gjoll_daemon_add_friend(gjoll_daemon_t *d,
+                                                     gjoll_node_t id,
+                                                     const void *shared,
+                                                     const size_t shared_len);
+
+GJOLL_EXTERN gjoll_friend_t *gjoll_daemon_get_friend(gjoll_daemon_t *d,
+                                                     gjoll_node_t id);
+
+GJOLL_EXTERN int gjoll_daemon_connect(gjoll_daemon_t *d, gjoll_node_t dst,
+                                      gjoll_service_t service,
+                                      const struct sockaddr *addr);
 
 #ifdef __cplusplus
 }

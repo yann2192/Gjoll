@@ -1,5 +1,5 @@
-#ifndef CRYPTO_H
-#define CRYPTO_H
+#ifndef GJOLL_CRYPTO_H
+#define GJOLL_CRYPTO_H
 
 // private header
 
