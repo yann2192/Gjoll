@@ -10,68 +10,68 @@
 
 #include "utlist.h"
 
-static void close_cb(gjoll_connection_t *conn) {
+static void close_cb(gjoll_sconnection_t *conn) {
     gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
     gjoll_log("connection closed\n");
-    gjoll_connection_clean(conn);
+    gjoll_sconnection_clean(conn);
     DL_DELETE(cc->d->ccs, cc);
     free(cc);
 }
 
-static void send_cb(gjoll_send_t *req, int status) {
+static void send_cb(gjoll_ssend_t *req, int status) {
     free(req);
 }
 
-static void recv_cb(gjoll_connection_t *conn,
+static void recv_cb(gjoll_sconnection_t *conn,
                     gjoll_buf_t buf) {
-    gjoll_send_t *req;
+    gjoll_ssend_t *req;
     char str[buf.len+1];
     memcpy(str, buf.base, buf.len);
     str[buf.len] = 0;
     gjoll_log("data: %s\n", str);
     free(buf.base);
-    if(conn->type == GJOLL_SERVER) {
-        req = malloc(sizeof(gjoll_send_t));
+    if(conn->conn.type == GJOLL_SERVER) {
+        req = malloc(sizeof(gjoll_ssend_t));
         if(req != NULL) {
-            gjoll_send(req, conn, "Hello client!", 13, send_cb);
+            gjoll_ssend(req, conn, "Hello client!", 13, send_cb);
         }
     }
 }
 
-static int header_cb(gjoll_connection_t *conn, gjoll_header_t header) {
-    gjoll_send_t *req;
+static int header_cb(gjoll_sconnection_t *conn, gjoll_header_t header) {
+    gjoll_ssend_t *req;
     gjoll_log("header.id: %d\n", header.id);
     gjoll_log("header.src: %ld\n", header.src);
     gjoll_log("header.dst: %ld\n", header.dst);
-    if(conn->type == GJOLL_CLIENT) {
-        req = malloc(sizeof(gjoll_send_t));
+    if(conn->conn.type == GJOLL_CLIENT) {
+        req = malloc(sizeof(gjoll_ssend_t));
         if(req != NULL) {
-            gjoll_send(req, conn, "Hello server!", 13, send_cb);
+            gjoll_ssend(req, conn, "Hello server!", 13, send_cb);
         }
     }
     return 0;
 }
 
-static int session_cb(gjoll_connection_t *conn, gjoll_node_t src) {
+static int session_cb(gjoll_sconnection_t *conn, gjoll_node_t src) {
     gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
     gjoll_friend_t *f = gjoll_daemon_get_friend(cc->d, src);
     gjoll_log("src: %ld\n", src);
     if(f == NULL) {
         return -1;
     }
-    if(gjoll_connection_init(conn, f->shared, f->shared_len, recv_cb)) {
+    if(gjoll_sconnection_init(conn, f->shared, f->shared_len, recv_cb)) {
         free(conn);
         return -1;
     }
     return 0;
 }
 
-static int accept_cb(gjoll_listener_t *listener) {
+static int accept_cb(gjoll_slistener_t *listener) {
     gjoll__conn_context_t *cc = malloc(sizeof(gjoll__conn_context_t));
     if(cc == NULL) {
         return -1;
     }
-    if(gjoll_accept(listener, &(cc->conn), session_cb, header_cb, close_cb)) {
+    if(gjoll_saccept(listener, &(cc->conn), session_cb, header_cb, close_cb)) {
         free(cc);
         return -1;
     }
@@ -81,13 +81,13 @@ static int accept_cb(gjoll_listener_t *listener) {
     return 0;
 }
 
-static void connect_cb(gjoll_connection_t *conn, int status) {
+static void connect_cb(gjoll_sconnection_t *conn, int status) {
     gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
     gjoll_friend_t *f = gjoll_daemon_get_friend(cc->d, cc->conn.header.dst);
     if(f == NULL) {
-        gjoll_connection_close(conn);
+        gjoll_sconnection_close(conn);
     } else {
-        gjoll_connection_init(conn, f->shared, f->shared_len, recv_cb);
+        gjoll_sconnection_init(conn, f->shared, f->shared_len, recv_cb);
     }
 }
 
@@ -100,17 +100,17 @@ int gjoll_daemon_init(gjoll_loop_t loop, gjoll_daemon_t *d, gjoll_node_t id,
     d->id = id;
     d->listener.data = d;
 
-    if(gjoll_listener_init(loop, &(d->listener), id)) {
-        gjoll_logerr("gjoll_listener_init failed\n");
+    if(gjoll_slistener_init(loop, &(d->listener), id)) {
+        gjoll_logerr("gjoll_slistener_init failed\n");
         return -1;
     }
 
-    if(gjoll_listener_bind(&(d->listener), addr)) {
+    if(gjoll_slistener_bind(&(d->listener), addr)) {
         gjoll_logerr("gjoll_bind_listener failed\n");
         return -2;
     }
 
-    if(gjoll_listener_listen(&(d->listener), accept_cb)) {
+    if(gjoll_slistener_listen(&(d->listener), accept_cb)) {
         gjoll_logerr("gjoll_ready_listener failed\n");
         return -3;
     }
@@ -122,12 +122,12 @@ void gjoll_daemon_clean(gjoll_daemon_t *d) {
     gjoll_friend_t *fcurrent, *ftmp;
     gjoll__conn_context_t *ccurrent, *ctmp;
 
-    gjoll_listener_close(&(d->listener), NULL);
+    gjoll_slistener_close(&(d->listener), NULL);
 
     DL_FOREACH_SAFE(d->ccs, ccurrent, ctmp) {
         //DL_DELETE(d->ccs, ccurrent);
         /* close_cb will clean */
-        gjoll_connection_close(&(ccurrent->conn));
+        gjoll_sconnection_close(&(ccurrent->conn));
         //free(ccurrent);
     }
 
@@ -169,8 +169,8 @@ int gjoll_daemon_connect(gjoll_daemon_t *d, gjoll_node_t dst,
     header.src = d->id;
     header.dst = dst;
     header.id = service;
-    if(gjoll_connect(d->gloop, &(cc->conn), addr, header, connect_cb,
-                     header_cb, close_cb)) {
+    if(gjoll_sconnect(d->gloop, &(cc->conn), addr, header, connect_cb,
+                      header_cb, close_cb)) {
         free(cc);
         return -1;
     }

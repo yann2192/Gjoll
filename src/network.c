@@ -8,8 +8,6 @@
 #include <string.h>
 
 #include "gjoll.h"
-#include "crypto.h"
-#include "parser.h"
 #include "buf.h"
 
 #include "ordo/misc/endianness.h"
@@ -50,11 +48,9 @@ static void gjoll__alloc_cb(uv_handle_t *handle, size_t suggested_size,
 }
 
 int gjoll_listener_init(gjoll_loop_t gloop,
-                        gjoll_listener_t *listener,
-                        gjoll_node_t identifier) {
+                        gjoll_listener_t *listener) {
     listener->server.data = NULL;
     listener->gloop = gloop;
-    listener->identifier = identifier;
     return uv_tcp_init(gloop.loop, &(listener->server));
 }
 
@@ -107,120 +103,16 @@ int gjoll_listener_listen(gjoll_listener_t *listener,
     return 0;
 }
 
-static void gjoll__send_cb(uv_write_t *req, int status) {
-    gjoll_send_t *greq = (gjoll_send_t *)req->data;
-
-    free(greq->ciphertext.base);
-    if(greq->cb != NULL) {
-        greq->cb(greq, status);
-    }
-}
-
-static void gjoll__send_header_cb(gjoll_send_t *req, int status) {
-    free(req);
-}
-
-static int gjoll__send_header(gjoll_connection_t *conn) {
-    gjoll_buf_t packet;
-    gjoll_send_t *greq;
-
-    if(!(greq = malloc(sizeof(gjoll_send_t))))
-        return -1;
-
-    if(gjoll_encrypt_header(&(conn->cout), conn->secret, conn->header, &packet,
-                            NULL))
-        goto err;
-
-    greq->ciphertext = gjoll_to_uv(packet);
-    greq->req.data = greq;
-    greq->cb = gjoll__send_header_cb;
-
-    uv_write(&(greq->req), (uv_stream_t *)&(conn->client),
-             &(greq->ciphertext), 1, gjoll__send_cb);
-    return 0;
-
-err:
-    if(greq) free(greq);
-    return -1;
-}
-
 static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
                            const uv_buf_t* buf) {
-    size_t i = 0;
-    gjoll_len_t len;
     gjoll_connection_t *conn = (gjoll_connection_t *)client->data;
     gjoll_buf_t gbuf = uv_to_gjoll(*buf);
-    gjoll_buf_t hbuf, data;
-    gjoll_header_t header;
-    gjoll_node_t src;
-    gjoll__parse_action_t action;
-
-    hbuf.base = conn->parser.hbuf;
-    hbuf.len = GJOLL_HEADER_LENGTH;
-
-    gbuf.len = nread;
 
     if(nread < 0) goto err;
+    gbuf.len = nread;
 
-    while(i < (size_t) nread) {
-        i += gjoll__parser_parse(&(conn->parser), &action, gbuf);
-
-        switch(action) {
-            case GJOLL_HEADER_ACTION:
-                src = *(gjoll_node_t *)OFFSET(conn->parser.hbuf, 8);
-                src = fmbe64(src);
-                if(conn->type == GJOLL_SERVER && conn->session_cb != NULL) {
-                    if(conn->session_cb(conn, src)) {
-                        goto err;
-                    }
-                }
-                if(gjoll_decrypt_header(&(conn->cin), conn->secret,
-                                        hbuf, &header)) {
-                    goto err;
-                }
-
-                if(conn->header_cb != NULL && conn->header_cb(conn, header))
-                    goto err;
-
-                if(conn->type == GJOLL_SERVER) {
-                    conn->header.id = header.id;
-                    conn->header.src = header.dst;
-                    conn->header.dst = header.src;
-                }
-
-                if(conn->type == GJOLL_SERVER && gjoll__send_header(conn))
-                    goto err;
-                action = GJOLL_NONE_ACTION;
-                break;
-            case GJOLL_SIZE_ACTION:
-                if(gjoll_decrypt_size(&(conn->cin), conn->parser.lenbuff,
-                                      &len)) {
-                    goto err;
-                }
-                if(gjoll__parser_alloc_data(&(conn->parser), len))
-                    goto err;
-                action = GJOLL_NONE_ACTION;
-                break;
-            case GJOLL_DATA_ACTION:
-                memset(&data, 0, sizeof(gjoll_buf_t));
-                if(gjoll_decrypt_data(&(conn->cin), len,
-                                      conn->parser.data, &data)) {
-                    goto err;
-                }
-                gjoll__parser_free_data(&(conn->parser));
-                if(conn->recv_cb != NULL) {
-                    conn->recv_cb(conn, data);
-                } else {
-                    free(data.base);
-                }
-                action = GJOLL_NONE_ACTION;
-                break;
-            default:
-                break;
-        }
-
-        gbuf.base = OFFSET(buf->base, i);
-        gbuf.len -= i;
+    if(conn->recv_cb != NULL) {
+        conn->recv_cb(conn, gbuf);
     }
 
     free(buf->base);
@@ -228,7 +120,6 @@ static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
 
 err:
     free(buf->base);
-    gjoll__parser_free_data(&(conn->parser));
     gjoll_connection_close(conn);
     return;
 }
@@ -249,18 +140,11 @@ static void gjoll__connect_cb(uv_connect_t *req, int status) {
 
 int gjoll_accept(gjoll_listener_t *listener,
                  gjoll_connection_t *conn,
-                 gjoll_session_cb session_cb,
-                 gjoll_header_cb header_cb,
                  gjoll_close_cb close_cb) {
     memset(conn, 0, sizeof(gjoll_connection_t));
     conn->gloop = listener->gloop;
-    conn->header.src = listener->identifier;
-    conn->session_cb = session_cb;
-    conn->header_cb = header_cb;
     conn->close_cb = close_cb;
     conn->type = GJOLL_SERVER;
-
-    gjoll__parser_init(&(conn->parser));
 
     uv_tcp_init(listener->gloop.loop, &(conn->client));
     conn->client.data = conn;
@@ -276,22 +160,16 @@ int gjoll_accept(gjoll_listener_t *listener,
 int gjoll_connect(gjoll_loop_t gloop,
                   gjoll_connection_t *conn,
                   const struct sockaddr *addr,
-                  gjoll_header_t header,
                   gjoll_connect_cb connect_cb,
-                  gjoll_header_cb header_cb,
                   gjoll_close_cb close_cb) {
     gjoll__connect_t *gct = NULL;
 
     memset(conn, 0, sizeof(gjoll_connection_t));
     conn->gloop = gloop;
     conn->type = GJOLL_CLIENT;
-    conn->header = header;
-    conn->header_cb = header_cb;
     conn->close_cb = close_cb;
     uv_tcp_init(gloop.loop, &(conn->client));
     conn->client.data = conn;
-
-    gjoll__parser_init(&(conn->parser));
 
     gct = malloc(sizeof(gjoll__connect_t));
     if(gct == NULL)
@@ -306,16 +184,8 @@ int gjoll_connect(gjoll_loop_t gloop,
 }
 
 int gjoll_connection_init(gjoll_connection_t *conn,
-                          const void *shared,
-                          const size_t shared_len,
                           gjoll_recv_cb recv_cb) {
     conn->recv_cb = recv_cb;
-    if(gjoll_preprocess_secret(shared, shared_len, &(conn->secret)))
-        return -1;
-
-    if(conn->type == GJOLL_CLIENT) {
-        return gjoll__send_header(conn);
-    }
     return 0;
 }
 
@@ -337,26 +207,28 @@ void gjoll_connection_close(gjoll_connection_t *conn) {
 }
 
 void gjoll_connection_clean(gjoll_connection_t *conn) {
-    gjoll_crypto_clean(&(conn->cin));
-    gjoll_crypto_clean(&(conn->cout));
-    gjoll__parser_free_data(&(conn->parser));
+}
+
+static void gjoll__send_cb(uv_write_t *req, int status) {
+    gjoll_send_t *greq = (gjoll_send_t *)req->data;
+
+    if(greq->cb != NULL) {
+        greq->cb(greq, status);
+    }
 }
 
 int gjoll_send(gjoll_send_t *greq, gjoll_connection_t *conn, void *data,
                size_t len, gjoll_send_cb cb) {
-    gjoll_buf_t plaintext, ciphertext;
+    gjoll_buf_t buffer;
 
-    plaintext.base = data;
-    plaintext.len = len;
+    buffer.base = data;
+    buffer.len = len;
 
     greq->cb = cb;
     greq->req.data = greq;
-
-    if(gjoll_encrypt_data(&(conn->cout), plaintext, &ciphertext))
-        return -1;
-    greq->ciphertext = gjoll_to_uv(ciphertext);
+    greq->buffer = gjoll_to_uv(buffer);
 
     uv_write(&(greq->req), (uv_stream_t *)&(conn->client),
-             &(greq->ciphertext), 1, gjoll__send_cb);
+             &(greq->buffer), 1, gjoll__send_cb);
     return 0;
 }

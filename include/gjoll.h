@@ -90,26 +90,44 @@ typedef enum gjoll__conn_type_s gjoll__conn_type_t;
 
 typedef struct gjoll_listener_s gjoll_listener_t;
 typedef struct gjoll_connection_s gjoll_connection_t;
-typedef struct gjoll_session_s gjoll_session_t;
 typedef struct gjoll_send_s gjoll_send_t;
+
+typedef struct gjoll_slistener_s gjoll_slistener_t;
+typedef struct gjoll_sconnection_s gjoll_sconnection_t;
+typedef struct gjoll_ssend_s gjoll_ssend_t;
 
 typedef struct gjoll_rule_s gjoll_rule_t;
 typedef struct gjoll_friend_s gjoll_friend_t;
 typedef struct gjoll__conn_context_s gjoll__conn_context_t;
 typedef struct gjoll_daemon_s gjoll_daemon_t;
 
+/* gjoll_listener_t callback */
 typedef int (*gjoll_accept_cb) (gjoll_listener_t *);
-typedef int (*gjoll_l_close_cb) (gjoll_listener_t *);
+typedef void (*gjoll_l_close_cb) (gjoll_listener_t *);
+
+/* gjoll_slistener_t callback */
+typedef int (*gjoll_saccept_cb) (gjoll_slistener_t *);
+typedef void (*gjoll_sl_close_cb) (gjoll_slistener_t *);
+
+/* gjoll_connection_t callback */
 typedef void (*gjoll_connect_cb) (gjoll_connection_t *, int);
-typedef int (*gjoll_session_cb) (gjoll_connection_t *,
-                                 gjoll_node_t);
-typedef int (*gjoll_header_cb) (gjoll_connection_t *,
-                                gjoll_header_t);
 typedef void (*gjoll_recv_cb) (gjoll_connection_t *,
                                gjoll_buf_t);
 typedef void (*gjoll_close_cb) (gjoll_connection_t *);
+
+/* gjoll_sconnection_t callback */
+typedef void (*gjoll_sconnect_cb) (gjoll_sconnection_t *, int);
+typedef void (*gjoll_srecv_cb) (gjoll_sconnection_t *,
+                                      gjoll_buf_t);
+typedef int (*gjoll_session_cb) (gjoll_sconnection_t *,
+                                 gjoll_node_t);
+typedef int (*gjoll_header_cb) (gjoll_sconnection_t *,
+                                gjoll_header_t);
+typedef void (*gjoll_sclose_cb) (gjoll_sconnection_t *);
+
 /* if status != 0, error */
 typedef void (*gjoll_send_cb) (gjoll_send_t *req, int status);
+typedef void (*gjoll_ssend_cb) (gjoll_ssend_t *req, int status);
 
 /*
  * Contains a shared secret of fixed length - it is preferred to use this to
@@ -167,15 +185,13 @@ GJOLL_EXTERN int gjoll_run(gjoll_loop_t);
 struct gjoll_listener_s {
     void *data;
     gjoll_loop_t gloop;
-    gjoll_node_t identifier;
     uv_tcp_t server;
     gjoll_accept_cb accept_cb;
     gjoll_l_close_cb close_cb;
 };
 
 GJOLL_EXTERN int gjoll_listener_init(gjoll_loop_t,
-                                     gjoll_listener_t *,
-                                     gjoll_node_t);
+                                     gjoll_listener_t *);
 
 GJOLL_EXTERN void gjoll_listener_close(gjoll_listener_t *,
                                        gjoll_l_close_cb);
@@ -191,34 +207,21 @@ struct gjoll_connection_s {
     gjoll_loop_t gloop;
     uv_tcp_t client;
     gjoll__conn_type_t type;
-    gjoll_header_t header;
-    gjoll_secret_t secret;
-    gjoll__parser_t parser;
-    gjoll__context_t cin;
-    gjoll__context_t cout;
-    gjoll_session_cb session_cb;
-    gjoll_header_cb header_cb;
     gjoll_recv_cb recv_cb;
     gjoll_close_cb close_cb;
 };
 
 GJOLL_EXTERN int gjoll_accept(gjoll_listener_t *,
                               gjoll_connection_t *,
-                              gjoll_session_cb,
-                              gjoll_header_cb,
                               gjoll_close_cb);
 
 GJOLL_EXTERN int gjoll_connect(gjoll_loop_t,
                                gjoll_connection_t *,
                                const struct sockaddr *,
-                               gjoll_header_t,
                                gjoll_connect_cb,
-                               gjoll_header_cb,
                                gjoll_close_cb);
 
 GJOLL_EXTERN int gjoll_connection_init(gjoll_connection_t *,
-                                       const void *shared,
-                                       const size_t shared_len,
                                        gjoll_recv_cb);
 
 GJOLL_EXTERN int gjoll_connection_getpeername(gjoll_connection_t *,
@@ -232,7 +235,7 @@ GJOLL_EXTERN void gjoll_connection_clean(gjoll_connection_t *);
 struct gjoll_send_s {
     void *data;
     uv_write_t req;
-    uv_buf_t ciphertext;
+    uv_buf_t buffer;
     gjoll_send_cb cb;
 };
 
@@ -242,12 +245,90 @@ GJOLL_EXTERN int gjoll_send(gjoll_send_t *,
                             size_t len,
                             gjoll_send_cb cb);
 
+/* SECURE CONNECTION */
+
+struct gjoll_slistener_s {
+    void *data;
+    gjoll_listener_t listener;
+    gjoll_node_t identifier;
+    gjoll_saccept_cb accept_cb;
+    gjoll_sl_close_cb close_cb;
+};
+
+GJOLL_EXTERN int gjoll_slistener_init(gjoll_loop_t,
+                                      gjoll_slistener_t *,
+                                      gjoll_node_t);
+
+GJOLL_EXTERN int gjoll_connection_getpeername(gjoll_connection_t *,
+                                              struct sockaddr *,
+                                              int *);
+
+GJOLL_EXTERN void gjoll_slistener_close(gjoll_slistener_t *,
+                                        gjoll_sl_close_cb);
+
+GJOLL_EXTERN int gjoll_slistener_bind(gjoll_slistener_t *,
+                                      const struct sockaddr *);
+
+GJOLL_EXTERN int gjoll_slistener_listen(gjoll_slistener_t *,
+                                        gjoll_saccept_cb);
+
+struct gjoll_sconnection_s {
+    void *data;
+    gjoll_connection_t conn;
+    gjoll_header_t header;
+    gjoll_secret_t secret;
+    gjoll__parser_t parser;
+    gjoll__context_t cin;
+    gjoll__context_t cout;
+    gjoll_sconnect_cb connect_cb;
+    gjoll_session_cb session_cb;
+    gjoll_header_cb header_cb;
+    gjoll_srecv_cb recv_cb;
+    gjoll_sclose_cb close_cb;
+};
+
+GJOLL_EXTERN int gjoll_saccept(gjoll_slistener_t *,
+                               gjoll_sconnection_t *,
+                               gjoll_session_cb,
+                               gjoll_header_cb,
+                               gjoll_sclose_cb);
+
+GJOLL_EXTERN int gjoll_sconnect(gjoll_loop_t,
+                                gjoll_sconnection_t *,
+                                const struct sockaddr *,
+                                gjoll_header_t,
+                                gjoll_sconnect_cb,
+                                gjoll_header_cb,
+                                gjoll_sclose_cb);
+
+GJOLL_EXTERN int gjoll_sconnection_init(gjoll_sconnection_t *,
+                                        const void *shared,
+                                        const size_t shared_len,
+                                        gjoll_srecv_cb);
+
+GJOLL_EXTERN void gjoll_sconnection_close(gjoll_sconnection_t *);
+
+GJOLL_EXTERN void gjoll_sconnection_clean(gjoll_sconnection_t *);
+
+struct gjoll_ssend_s {
+    void *data;
+    gjoll_send_t req;
+    gjoll_buf_t buffer;
+    gjoll_ssend_cb cb;
+};
+
+GJOLL_EXTERN int gjoll_ssend(gjoll_ssend_t *,
+                             gjoll_sconnection_t *,
+                             void *data,
+                             size_t len,
+                             gjoll_ssend_cb cb);
+
 
 /* DAEMON PART */
 
 struct gjoll_rule_s {
-    gjoll_connection_t *gconn;
-    uv_tcp_t *lconn;
+    gjoll_sconnection_t *gconn;
+    gjoll_connection_t *lconn;
 
     UT_hash_handle hh;
 };
@@ -262,7 +343,7 @@ struct gjoll_friend_s {
 
 struct gjoll__conn_context_s {
     gjoll_daemon_t *d;
-    gjoll_connection_t conn;
+    gjoll_sconnection_t conn;
 
     gjoll__conn_context_t *next, *prev;
 };
@@ -273,7 +354,7 @@ struct gjoll_daemon_s {
     gjoll__conn_context_t *ccs;
 
     gjoll_loop_t gloop;
-    gjoll_listener_t listener;
+    gjoll_slistener_t listener;
     gjoll_node_t id;
 };
 
