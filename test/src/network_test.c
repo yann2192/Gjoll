@@ -33,7 +33,7 @@ static char *test__gjoll__alloc_cb() {
     return 0;
 }
 
-static int accept_cb(gjoll_listener_t *l) {
+static int accept_cb(gjoll_slistener_t *l) {
     l->data = (void *) 1;
     return -1;
 }
@@ -53,25 +53,25 @@ static void connect_cb(uv_connect_t *req, int status) {
     uv_read_start((uv_stream_t *)sock, gjoll__alloc_cb, recv_cb);
 }
 
-static char *test__gjoll_listener1() {
+static char *test__gjoll_slistener1() {
     int res;
     struct sockaddr_in bind_addr;
     gjoll_loop_t lo;
-    gjoll_listener_t li;
+    gjoll_slistener_t li;
     uv_tcp_t sock;
     uv_connect_t c;
 
     gjoll_init(&lo);
-    res = gjoll_listener_init(lo, &li, 0);
-    mu_assert("test__gjoll_listener1: gjoll_listener_init returns failed",
+    res = gjoll_slistener_init(lo, &li, 0);
+    mu_assert("test__gjoll_slistener1: gjoll_slistener_init returns failed",
               !res);
     uv_ip4_addr("127.0.0.1", 9999, &bind_addr);
 
-    res = gjoll_listener_bind(&li, (const struct sockaddr*) &bind_addr);
-    mu_assert("test__gjoll_listener1: gjoll_listener_bind failed", !res);
+    res = gjoll_slistener_bind(&li, (const struct sockaddr*) &bind_addr);
+    mu_assert("test__gjoll_slistener1: gjoll_slistener_bind failed", !res);
 
-    res = gjoll_listener_listen(&li, accept_cb);
-    mu_assert("test__gjoll_listener1: gjoll_listener_listen failed", !res);
+    res = gjoll_slistener_listen(&li, accept_cb);
+    mu_assert("test__gjoll_slistener1: gjoll_slistener_listen failed", !res);
 
     uv_tcp_init(lo.loop, &sock);
     uv_tcp_connect(&c, &sock, (const struct sockaddr*) &bind_addr,
@@ -84,14 +84,14 @@ static char *test__gjoll_listener1() {
     /* two passe to check if sock received rst */
     uv_run(lo.loop, UV_RUN_NOWAIT);
 
-    mu_assert("test__gjoll_listener1: sock.data != 2", sock.data == (void *) 2);
-    mu_assert("test__gjoll_listener1: li.data == 0", li.data != 0);
+    mu_assert("test__gjoll_slistener1: sock.data != 2", sock.data == (void *) 2);
+    mu_assert("test__gjoll_slistener1: li.data == 0", li.data != 0);
 
     gjoll_delete(&lo);
     return 0;
 }
 
-static int accept_cb2(gjoll_listener_t *l) {
+static int accept_cb2(gjoll_slistener_t *l) {
     l->data = (void *) 1;
     return 0;
 }
@@ -108,25 +108,25 @@ static void connect_cb2(uv_connect_t *req, int status) {
     uv_read_start((uv_stream_t *)sock, gjoll__alloc_cb, recv_cb2);
 }
 
-static char *test__gjoll_listener2() {
+static char *test__gjoll_slistener2() {
     int res;
     struct sockaddr_in bind_addr;
     gjoll_loop_t lo;
-    gjoll_listener_t li;
+    gjoll_slistener_t li;
     uv_tcp_t sock;
     uv_connect_t c;
 
     gjoll_init(&lo);
-    res = gjoll_listener_init(lo, &li, 0);
-    mu_assert("test__gjoll_listener2: gjoll_listener_init returns failed",
+    res = gjoll_slistener_init(lo, &li, 0);
+    mu_assert("test__gjoll_slistener2: gjoll_slistener_init returns failed",
               !res);
     uv_ip4_addr("127.0.0.1", 10000, &bind_addr);
 
-    res = gjoll_listener_bind(&li, (const struct sockaddr*) &bind_addr);
-    mu_assert("test__gjoll_listener2: gjoll_listener_bind failed", !res);
+    res = gjoll_slistener_bind(&li, (const struct sockaddr*) &bind_addr);
+    mu_assert("test__gjoll_slistener2: gjoll_slistener_bind failed", !res);
 
-    res = gjoll_listener_listen(&li, accept_cb2);
-    mu_assert("test__gjoll_listener2: gjoll_listener_listen failed", !res);
+    res = gjoll_slistener_listen(&li, accept_cb2);
+    mu_assert("test__gjoll_slistener2: gjoll_slistener_listen failed", !res);
 
     uv_tcp_init(lo.loop, &sock);
     uv_tcp_connect(&c, &sock, (const struct sockaddr*) &bind_addr,
@@ -139,9 +139,9 @@ static char *test__gjoll_listener2() {
     /* two passe to check if sock received rst */
     uv_run(lo.loop, UV_RUN_NOWAIT);
 
-    mu_assert("test__gjoll_listener2: sock.data != 1",
+    mu_assert("test__gjoll_slistener2: sock.data != 1",
               sock.data == (void *) 1);
-    mu_assert("test__gjoll_listener2: li.data == 0", li.data != 0);
+    mu_assert("test__gjoll_slistener2: li.data == 0", li.data != 0);
 
     gjoll_delete(&lo);
     return 0;
@@ -150,7 +150,7 @@ static char *test__gjoll_listener2() {
 char *network_tests() {
     mu_run_test(test__gjoll_init);
     mu_run_test(test__gjoll__alloc_cb);
-    mu_run_test(test__gjoll_listener1);
-    mu_run_test(test__gjoll_listener2);
+    mu_run_test(test__gjoll_slistener1);
+    mu_run_test(test__gjoll_slistener2);
     return 0;
 }
