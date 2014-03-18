@@ -99,6 +99,7 @@ typedef struct gjoll_ssend_s gjoll_ssend_t;
 typedef struct gjoll_rule_s gjoll_rule_t;
 typedef struct gjoll_friend_s gjoll_friend_t;
 typedef struct gjoll__conn_context_s gjoll__conn_context_t;
+typedef struct gjoll__listener_context_s gjoll__listener_context_t;
 typedef struct gjoll_daemon_s gjoll_daemon_t;
 
 /* gjoll_listener_t callback */
@@ -180,7 +181,7 @@ GJOLL_EXTERN int gjoll_run_once(gjoll_loop_t);
 GJOLL_EXTERN int gjoll_run(gjoll_loop_t);
 
 
-/* NETWORK PART */
+/* NETWORK */
 
 struct gjoll_listener_s {
     void *data;
@@ -231,6 +232,8 @@ GJOLL_EXTERN int gjoll_connection_getpeername(gjoll_connection_t *,
 GJOLL_EXTERN void gjoll_connection_close(gjoll_connection_t *);
 
 GJOLL_EXTERN void gjoll_connection_clean(gjoll_connection_t *);
+
+GJOLL_EXTERN int gjoll_connection_closed(gjoll_connection_t *);
 
 struct gjoll_send_s {
     void *data;
@@ -310,6 +313,8 @@ GJOLL_EXTERN void gjoll_sconnection_close(gjoll_sconnection_t *);
 
 GJOLL_EXTERN void gjoll_sconnection_clean(gjoll_sconnection_t *);
 
+GJOLL_EXTERN int gjoll_sconnection_closed(gjoll_sconnection_t *);
+
 struct gjoll_ssend_s {
     void *data;
     gjoll_send_t req;
@@ -324,11 +329,11 @@ GJOLL_EXTERN int gjoll_ssend(gjoll_ssend_t *,
                              gjoll_ssend_cb cb);
 
 
-/* DAEMON PART */
+/* DAEMON */
 
 struct gjoll_rule_s {
-    gjoll_sconnection_t *gconn;
-    gjoll_connection_t *lconn;
+    gjoll_service_t id;
+    const struct sockaddr *laddr;
 
     UT_hash_handle hh;
 };
@@ -343,15 +348,27 @@ struct gjoll_friend_s {
 
 struct gjoll__conn_context_s {
     gjoll_daemon_t *d;
-    gjoll_sconnection_t conn;
+    gjoll_sconnection_t gconn;
+    gjoll_connection_t lconn;
 
     gjoll__conn_context_t *next, *prev;
+};
+
+struct gjoll__listener_context_s {
+    gjoll_daemon_t *d;
+    gjoll_listener_t listener;
+    gjoll_node_t node;
+    gjoll_service_t service;
+    const struct sockaddr *addr;
+
+    gjoll__listener_context_t *next, *prev;
 };
 
 struct gjoll_daemon_s {
     gjoll_rule_t *rules;
     gjoll_friend_t *friends;
     gjoll__conn_context_t *ccs;
+    gjoll__listener_context_t *lcs;
 
     gjoll_loop_t gloop;
     gjoll_slistener_t listener;
@@ -373,9 +390,23 @@ GJOLL_EXTERN gjoll_friend_t *gjoll_daemon_add_friend(gjoll_daemon_t *d,
 GJOLL_EXTERN gjoll_friend_t *gjoll_daemon_get_friend(gjoll_daemon_t *d,
                                                      gjoll_node_t id);
 
+GJOLL_EXTERN gjoll_rule_t *gjoll_daemon_add_rule(gjoll_daemon_t *d,
+                                                 gjoll_service_t service,
+                                                 const struct sockaddr *laddr);
+
+GJOLL_EXTERN gjoll_rule_t *gjoll_daemon_get_rule(gjoll_daemon_t *d,
+                                                 gjoll_service_t id);
+
+#if 0
 GJOLL_EXTERN int gjoll_daemon_connect(gjoll_daemon_t *d, gjoll_node_t dst,
                                       gjoll_service_t service,
                                       const struct sockaddr *addr);
+#endif
+
+GJOLL_EXTERN int gjoll_daemon_add_route(gjoll_daemon_t *d, gjoll_node_t node,
+                                        gjoll_service_t service,
+                                        const struct sockaddr *addr,
+                                        const struct sockaddr *laddr);
 
 #ifdef __cplusplus
 }

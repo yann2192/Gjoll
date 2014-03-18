@@ -19,6 +19,8 @@ int main(int argc, char **argv) {
     gjoll_loop_t loop;
     gjoll_daemon_t d;
     struct sockaddr_in bind_addr;
+    struct sockaddr_in laddr;
+    struct sockaddr_in laddr2;
 
     if(gjoll_init(&loop)) {
         fprintf(stderr, "gjoll_init failed\n");
@@ -33,8 +35,19 @@ int main(int argc, char **argv) {
         fprintf(stderr, "uv_ip4_addr failed\n");
         return 1;
     }
+
+    if(uv_ip4_addr("127.0.0.1", 8888, &laddr)) {
+        fprintf(stderr, "uv_ip4_addr failed\n");
+        return 1;
+    }
+
+    if(uv_ip4_addr("127.0.0.1", 7777, &laddr2)) {
+        fprintf(stderr, "uv_ip4_addr failed\n");
+        return 1;
+    }
+
     if(gjoll_daemon_init(loop, &d, myid,
-                         (const struct sockaddr*) &bind_addr)) {
+                         (const struct sockaddr *) &bind_addr)) {
         fprintf(stderr, "gjoll_daemon_init failed\n");
         return 1;
     }
@@ -42,11 +55,25 @@ int main(int argc, char **argv) {
         fprintf(stderr, "gjoll_daemon_add_friend failed\n");
         return 1;
     }
+    if(gjoll_daemon_add_rule(&d, service,
+                             (const struct sockaddr *) &laddr) == NULL) {
+        fprintf(stderr, "gjoll_daemon_add_rule failed\n");
+        return 1;
+    }
+    /*
     if(gjoll_daemon_connect(&d, myid, 1234,
                             (const struct sockaddr*) &bind_addr)) {
         fprintf(stderr, "gjoll_daemon_connect failed\n");
         return 1;
     }
+    */
+    if(gjoll_daemon_add_route(&d, myid, service,
+                              (const struct sockaddr *) &bind_addr,
+                              (const struct sockaddr *) &laddr2)) {
+        fprintf(stderr, "gjoll_daemon_service failed\n");
+        return 1;
+    }
+
     gjoll_run(loop);
 
     uv_signal_stop(&s1);

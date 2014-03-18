@@ -22,7 +22,7 @@ int gjoll_init(gjoll_loop_t *gloop) {
 }
 
 void gjoll_delete(gjoll_loop_t *gloop) {
-    uv_run(gloop->loop, UV_RUN_NOWAIT);
+    while(uv_run(gloop->loop, UV_RUN_NOWAIT));
     uv_loop_close(gloop->loop);
     free(gloop->loop);
     gloop->loop = NULL;
@@ -207,6 +207,10 @@ void gjoll_connection_close(gjoll_connection_t *conn) {
 }
 
 void gjoll_connection_clean(gjoll_connection_t *conn) {
+}
+
+int gjoll_connection_closed(gjoll_connection_t *conn) {
+    return uv_is_closing((uv_handle_t *)&(conn->client));
 }
 
 static void gjoll__send_cb(uv_write_t *req, int status) {

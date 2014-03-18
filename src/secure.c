@@ -268,6 +268,10 @@ void gjoll_sconnection_clean(gjoll_sconnection_t *conn) {
     gjoll_connection_clean(&(conn->conn));
 }
 
+int gjoll_sconnection_closed(gjoll_sconnection_t *conn) {
+    return gjoll_connection_closed(&(conn->conn));
+}
+
 static void gjoll__send_cb(gjoll_send_t *req, int status) {
     gjoll_ssend_t *sreq = (gjoll_ssend_t *)req->data;
 
