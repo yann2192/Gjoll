@@ -104,6 +104,9 @@ static void gjoll__recv_cb(gjoll_connection_t *conn, gjoll_buf_t buf) {
 
         switch(action) {
             case GJOLL_HEADER_ACTION:
+                /* Remove reading limit */
+                gjoll_connection_readlen(conn, -1);
+
                 src = *(gjoll_node_t *)OFFSET(sconn->parser.hbuf, 8);
                 src = fmbe64(src);
                 if(conn->type == GJOLL_SERVER && sconn->session_cb != NULL) {
@@ -124,7 +127,6 @@ static void gjoll__recv_cb(gjoll_connection_t *conn, gjoll_buf_t buf) {
                     sconn->header.src = header.dst;
                     sconn->header.dst = header.src;
                 }
-
                 if(conn->type == GJOLL_SERVER && gjoll__send_header(sconn))
                     goto err;
                 action = GJOLL_NONE_ACTION;
@@ -206,6 +208,7 @@ int gjoll_saccept(gjoll_slistener_t *listener,
 
     conn->conn.data = conn;
     if(!res) {
+        gjoll_connection_readlen(&(conn->conn), GJOLL_HEADER_LENGTH);
         return gjoll_connection_init(&(conn->conn), gjoll__recv_cb);
     }
     return res;
@@ -232,6 +235,7 @@ int gjoll_sconnect(gjoll_loop_t gloop,
 
     conn->conn.data = conn;
     if(!res) {
+        gjoll_connection_readlen(&(conn->conn), GJOLL_HEADER_LENGTH);
         return gjoll_connection_init(&(conn->conn), gjoll__recv_cb);
     }
     return res;
@@ -255,6 +259,10 @@ int gjoll_sconnection_getpeername(gjoll_sconnection_t *conn,
                                   struct sockaddr *name,
                                   int *namelen) {
     return gjoll_connection_getpeername(&(conn->conn), name, namelen);
+}
+
+void gjoll_sconnection_readlen(gjoll_sconnection_t *conn, int readlen) {
+    gjoll_connection_readlen(&(conn->conn), readlen);
 }
 
 void gjoll_sconnection_close(gjoll_sconnection_t *conn) {

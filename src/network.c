@@ -39,7 +39,12 @@ int gjoll_run(gjoll_loop_t gloop) {
 
 static void gjoll__alloc_cb(uv_handle_t *handle, size_t suggested_size,
                      uv_buf_t *buf) {
-    char *buff = malloc(suggested_size);
+    char *buff;
+    gjoll_connection_t *conn = (gjoll_connection_t *)handle->data;
+    if(conn->readlen >= 0) {
+        suggested_size = conn->readlen;
+    }
+    buff = malloc(suggested_size);
     if(buff != NULL) {
         memset(buff, 0, suggested_size);
         buf->base = buff;
@@ -108,7 +113,13 @@ static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
     gjoll_connection_t *conn = (gjoll_connection_t *)client->data;
     gjoll_buf_t gbuf = uv_to_gjoll(*buf);
 
-    if(nread < 0) goto err;
+    if(nread < 0) {
+        if(nread == UV_ENOBUFS) {
+            goto skip;
+        } else {
+            goto err;
+        }
+    }
     gbuf.len = nread;
 
     if(conn->recv_cb != NULL) {
@@ -118,8 +129,12 @@ static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
     free(buf->base);
     return;
 
+skip:
+    if(buf->base != NULL) free(buf->base);
+    return;
+
 err:
-    free(buf->base);
+    if(buf->base != NULL) free(buf->base);
     gjoll_connection_close(conn);
     return;
 }
@@ -133,8 +148,6 @@ typedef struct {
 static void gjoll__connect_cb(uv_connect_t *req, int status) {
     gjoll__connect_t *gct = (gjoll__connect_t *)req->data;
     gct->connect_cb(gct->conn, status);
-    uv_read_start((uv_stream_t *)&(gct->conn->client), gjoll__alloc_cb,
-                  gjoll__recv_cb);
     free(gct);
 }
 
@@ -145,6 +158,7 @@ int gjoll_accept(gjoll_listener_t *listener,
     conn->gloop = listener->gloop;
     conn->close_cb = close_cb;
     conn->type = GJOLL_SERVER;
+    conn->readlen = -1;
 
     uv_tcp_init(listener->gloop.loop, &(conn->client));
     conn->client.data = conn;
@@ -153,8 +167,7 @@ int gjoll_accept(gjoll_listener_t *listener,
         return -1;
     }
 
-    return uv_read_start((uv_stream_t *)&(conn->client), gjoll__alloc_cb,
-                         gjoll__recv_cb);
+    return 0;
 }
 
 int gjoll_connect(gjoll_loop_t gloop,
@@ -168,6 +181,7 @@ int gjoll_connect(gjoll_loop_t gloop,
     conn->gloop = gloop;
     conn->type = GJOLL_CLIENT;
     conn->close_cb = close_cb;
+    conn->readlen = -1;
     uv_tcp_init(gloop.loop, &(conn->client));
     conn->client.data = conn;
 
@@ -186,7 +200,12 @@ int gjoll_connect(gjoll_loop_t gloop,
 int gjoll_connection_init(gjoll_connection_t *conn,
                           gjoll_recv_cb recv_cb) {
     conn->recv_cb = recv_cb;
-    return 0;
+    return uv_read_start((uv_stream_t *)&(conn->client), gjoll__alloc_cb,
+                         gjoll__recv_cb);
+}
+
+void gjoll_connection_readlen(gjoll_connection_t *conn, int readlen) {
+    conn->readlen = readlen;
 }
 
 int gjoll_connection_getpeername(gjoll_connection_t *conn,
@@ -232,7 +251,6 @@ int gjoll_send(gjoll_send_t *greq, gjoll_connection_t *conn, void *data,
     greq->req.data = greq;
     greq->buffer = gjoll_to_uv(buffer);
 
-    uv_write(&(greq->req), (uv_stream_t *)&(conn->client),
-             &(greq->buffer), 1, gjoll__send_cb);
-    return 0;
+    return uv_write(&(greq->req), (uv_stream_t *)&(conn->client),
+            &(greq->buffer), 1, gjoll__send_cb);
 }

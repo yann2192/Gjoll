@@ -207,6 +207,7 @@ struct gjoll_connection_s {
     void *data;
     gjoll_loop_t gloop;
     uv_tcp_t client;
+    int readlen;
     gjoll__conn_type_t type;
     gjoll_recv_cb recv_cb;
     gjoll_close_cb close_cb;
@@ -228,6 +229,9 @@ GJOLL_EXTERN int gjoll_connection_init(gjoll_connection_t *,
 GJOLL_EXTERN int gjoll_connection_getpeername(gjoll_connection_t *,
                                               struct sockaddr *,
                                               int *);
+
+GJOLL_EXTERN void gjoll_connection_readlen(gjoll_connection_t *conn,
+                                           int readlen);
 
 GJOLL_EXTERN void gjoll_connection_close(gjoll_connection_t *);
 
@@ -261,10 +265,6 @@ struct gjoll_slistener_s {
 GJOLL_EXTERN int gjoll_slistener_init(gjoll_loop_t,
                                       gjoll_slistener_t *,
                                       gjoll_node_t);
-
-GJOLL_EXTERN int gjoll_connection_getpeername(gjoll_connection_t *,
-                                              struct sockaddr *,
-                                              int *);
 
 GJOLL_EXTERN void gjoll_slistener_close(gjoll_slistener_t *,
                                         gjoll_sl_close_cb);
@@ -308,6 +308,13 @@ GJOLL_EXTERN int gjoll_sconnection_init(gjoll_sconnection_t *,
                                         const void *shared,
                                         const size_t shared_len,
                                         gjoll_srecv_cb);
+
+GJOLL_EXTERN int gjoll_sconnection_getpeername(gjoll_sconnection_t *,
+                                               struct sockaddr *,
+                                               int *);
+
+GJOLL_EXTERN void gjoll_sconnection_readlen(gjoll_sconnection_t *conn,
+                                            int readlen);
 
 GJOLL_EXTERN void gjoll_sconnection_close(gjoll_sconnection_t *);
 
