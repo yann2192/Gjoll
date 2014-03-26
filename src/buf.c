@@ -1,4 +1,4 @@
-#include "../src/buf.h"
+#include "buf.h"
 
 gjoll_buf_t gjoll_buf_init(void* data, size_t len) {
     gjoll_buf_t buf;

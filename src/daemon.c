@@ -131,7 +131,8 @@ static int header_cb(gjoll_sconnection_t *conn, gjoll_header_t header) {
         }
         /* Stop reading during local connection */
         gjoll_sconnection_readlen(conn, 0);
-        if(gjoll_connect(cc->d->gloop, &(cc->lconn), rule->laddr, connect_cb,
+        if(gjoll_connect(cc->d->gloop, &(cc->lconn),
+                         (const struct sockaddr *) &(rule->laddr), connect_cb,
                          close_cb)) {
             return -1;
         }
@@ -170,7 +171,8 @@ static int accept_cb(gjoll_listener_t *listener) {
     header.dst = lc->node;
     header.id = lc->service;
 
-    if(gjoll_sconnect(lc->d->gloop, &(cc->gconn), lc->addr, header,
+    if(gjoll_sconnect(lc->d->gloop, &(cc->gconn),
+                      (const struct sockaddr *) &(lc->addr), header,
                       sconnect_cb, header_cb, sclose_cb)) {
         gjoll_connection_close(&(cc->lconn));
         return -1;
@@ -204,7 +206,7 @@ static int saccept_cb(gjoll_slistener_t *listener) {
 }
 
 int gjoll_daemon_init(gjoll_loop_t loop, gjoll_daemon_t *d, gjoll_node_t id,
-                      const struct sockaddr *addr) {
+                      const struct sockaddr_in addr) {
     d->rules = NULL;
     d->friends = NULL;
     d->ccs = NULL;
@@ -218,7 +220,8 @@ int gjoll_daemon_init(gjoll_loop_t loop, gjoll_daemon_t *d, gjoll_node_t id,
         return -1;
     }
 
-    if(gjoll_slistener_bind(&(d->listener), addr)) {
+    if(gjoll_slistener_bind(&(d->listener),
+                            (const struct sockaddr *) &addr)) {
         gjoll_logerr("gjoll_bind_listener failed\n");
         return -2;
     }
@@ -285,7 +288,7 @@ gjoll_friend_t *gjoll_daemon_get_friend(gjoll_daemon_t *d, gjoll_node_t id) {
 
 gjoll_rule_t *gjoll_daemon_add_rule(gjoll_daemon_t *d,
                                     gjoll_service_t service,
-                                    const struct sockaddr *laddr) {
+                                    const struct sockaddr_in laddr) {
     gjoll_rule_t *f = malloc(sizeof(gjoll_rule_t));
     if(f == NULL) {
         return NULL;
@@ -306,7 +309,7 @@ gjoll_rule_t *gjoll_daemon_get_rule(gjoll_daemon_t *d, gjoll_service_t id) {
 /* Deprecated */
 int gjoll_daemon_connect(gjoll_daemon_t *d, gjoll_node_t dst,
                          gjoll_service_t service,
-                         const struct sockaddr *addr) {
+                         const struct sockaddr_in addr) {
     gjoll_header_t header;
     gjoll__conn_context_t *cc = malloc(sizeof(gjoll__conn_context_t));
     if(cc == NULL) {
@@ -315,8 +318,8 @@ int gjoll_daemon_connect(gjoll_daemon_t *d, gjoll_node_t dst,
     header.src = d->id;
     header.dst = dst;
     header.id = service;
-    if(gjoll_sconnect(d->gloop, &(cc->gconn), addr, header, sconnect_cb,
-                      header_cb, sclose_cb2)) {
+    if(gjoll_sconnect(d->gloop, &(cc->gconn), (const struct sockaddr *) &addr,
+                      header, sconnect_cb, header_cb, sclose_cb2)) {
         free(cc);
         return -1;
     }
@@ -328,15 +331,16 @@ int gjoll_daemon_connect(gjoll_daemon_t *d, gjoll_node_t dst,
 
 int gjoll_daemon_add_route(gjoll_daemon_t *d, gjoll_node_t node,
                            gjoll_service_t service,
-                           const struct sockaddr *addr,
-                           const struct sockaddr *laddr) {
+                           const struct sockaddr_in addr,
+                           const struct sockaddr_in laddr) {
     gjoll__listener_context_t *lc = malloc(sizeof(gjoll__listener_context_t));
 
     if(gjoll_listener_init(d->gloop, &(lc->listener))) {
         free(lc);
         return -1;
     }
-    if(gjoll_listener_bind(&(lc->listener), laddr)) {
+    if(gjoll_listener_bind(&(lc->listener),
+                           (const struct sockaddr *) &laddr)) {
         free(lc);
         return -2;
     }

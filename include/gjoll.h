@@ -51,6 +51,7 @@ extern "C" {
 
 #include "uv.h"
 #include "uthash.h"
+#include "lua.h"
 
 #define GJOLL_NONCE_SIZE 8
 #define GJOLL_IDENTIFIER_SIZE 8
@@ -340,7 +341,7 @@ GJOLL_EXTERN int gjoll_ssend(gjoll_ssend_t *,
 
 struct gjoll_rule_s {
     gjoll_service_t id;
-    const struct sockaddr *laddr;
+    struct sockaddr_in laddr;
 
     UT_hash_handle hh;
 };
@@ -366,7 +367,7 @@ struct gjoll__listener_context_s {
     gjoll_listener_t listener;
     gjoll_node_t node;
     gjoll_service_t service;
-    const struct sockaddr *addr;
+    struct sockaddr_in addr;
 
     gjoll__listener_context_t *next, *prev;
 };
@@ -385,7 +386,7 @@ struct gjoll_daemon_s {
 GJOLL_EXTERN int gjoll_daemon_init(gjoll_loop_t loop,
                                    gjoll_daemon_t *d,
                                    gjoll_node_t id,
-                                   const struct sockaddr *addr);
+                                   const struct sockaddr_in addr);
 
 GJOLL_EXTERN void gjoll_daemon_clean(gjoll_daemon_t *d);
 
@@ -399,21 +400,27 @@ GJOLL_EXTERN gjoll_friend_t *gjoll_daemon_get_friend(gjoll_daemon_t *d,
 
 GJOLL_EXTERN gjoll_rule_t *gjoll_daemon_add_rule(gjoll_daemon_t *d,
                                                  gjoll_service_t service,
-                                                 const struct sockaddr *laddr);
+                                                 const struct sockaddr_in laddr);
 
 GJOLL_EXTERN gjoll_rule_t *gjoll_daemon_get_rule(gjoll_daemon_t *d,
                                                  gjoll_service_t id);
 
-#if 0
-GJOLL_EXTERN int gjoll_daemon_connect(gjoll_daemon_t *d, gjoll_node_t dst,
-                                      gjoll_service_t service,
-                                      const struct sockaddr *addr);
-#endif
-
 GJOLL_EXTERN int gjoll_daemon_add_route(gjoll_daemon_t *d, gjoll_node_t node,
                                         gjoll_service_t service,
-                                        const struct sockaddr *addr,
-                                        const struct sockaddr *laddr);
+                                        const struct sockaddr_in addr,
+                                        const struct sockaddr_in laddr);
+
+/* LUA */
+
+GJOLL_EXTERN lua_State *gjoll_lua_new(gjoll_loop_t *loop);
+
+GJOLL_EXTERN void gjoll_lua_clean(lua_State *l);
+
+GJOLL_EXTERN void gjoll_lua_delete(lua_State *l);
+
+GJOLL_EXTERN int gjoll_lua_load(lua_State *l, const char *filename);
+
+GJOLL_EXTERN const char *gjoll_lua_geterror(lua_State *l);
 
 #ifdef __cplusplus
 }

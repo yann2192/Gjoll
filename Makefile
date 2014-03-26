@@ -1,4 +1,4 @@
-FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -Wdeclaration-after-statement -D_GNU_SOURCE -std=c99 -pthread -DBUILDING_GJOLL -DORDO_STATIC_LIB
+FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -Wdeclaration-after-statement -D_GNU_SOURCE -std=c99 -pthread -lm -DBUILDING_GJOLL -DORDO_STATIC_LIB
 
 BINDIR = bin
 OBJDIR = obj
@@ -8,11 +8,13 @@ SRCDIR = src
 LIBUV_INCLUDE = libuv/include
 ORDO_INCLUDE = ordo/include
 UTHASH_INCLUDE = uthash/src
+LUA_INCLUDE = lua-5.2.3/src
 
 LIBUV_LIB = libuv/.libs/libuv.a
 ORDO_LIB = ordo/build/libordo_s.a
+LUA_LIB = lua-5.2.3/src/liblua.a
 
-LD_FLAGS = -pthread $(LIBUV_LIB) $(ORDO_LIB)
+LD_FLAGS = $(LIBUV_LIB) $(ORDO_LIB) $(LUA_LIB)
 
 SRC = $(wildcard $(SRCDIR)/*.c)
 OBJ = $(notdir $(SRC:.c=.o))
@@ -35,7 +37,7 @@ EXEC_D = $(BINDIR)/gjoll
 
 all: lib daemon
 
-lib: libuv ordo $(LIB)
+lib: libuv ordo lua $(LIB)
 
 daemon: lib $(EXEC_D)
 
@@ -64,6 +66,14 @@ ordo: $(ORDO_LIB)
 $(ORDO_LIB):
 	cd ordo/build && cmake .. $(ORDO_CONFIG) && make
 
+lua: $(LUA_LIB)
+
+$(LUA_LIB):
+	#cd lua-5.2.3 && make platform
+	@echo 'error, lua is not build'
+	@echo 'do: $ cd lua-5.2.3 && make platform'
+	exit 1
+
 bin/libgjoll.a: $(BINDIR) $(OBJDIR) $(OBJ)
 	$(AR) rcs $@ $(OBJ)
 
@@ -74,10 +84,10 @@ $(EXEC_D): $(BINDIR) $(OBJDIR_D) $(OBJ_D) $(LIB)
 	$(CC) -o $(EXEC_D) $(OBJ_D) $(FLAGS) $(LIB) $(LD_FLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -I$(UTHASH_INCLUDE) -o $@
+	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -I$(UTHASH_INCLUDE) -I$(LUA_INCLUDE) -o $@
 
 $(OBJDIR_D)/%.o: $(SRCDIR_D)/%.c
-	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -I$(UTHASH_INCLUDE) -o $@
+	$(CC) -c $< $(FLAGS) -I$(INCLUDE) -I$(LIBUV_INCLUDE) -I$(ORDO_INCLUDE) -I$(UTHASH_INCLUDE) -I$(LUA_INCLUDE) -o $@
 
 .PHONY: clean
 clean:
@@ -90,3 +100,4 @@ clean:
 cleanall: clean
 	cd libuv; make clean
 	cd ordo/build; make clean
+	cd lua-5.2.3/src; make clean
