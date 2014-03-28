@@ -39,6 +39,11 @@ int gjoll_run(gjoll_loop_t gloop) {
 
 static void gjoll__alloc_cb(uv_handle_t *handle, size_t suggested_size,
                      uv_buf_t *buf) {
+    /*
+     * NOTE: maybe create a static buffer for eatch gjoll_connection_t to
+     * limit allocation.
+     */
+
     char *buff;
     gjoll_connection_t *conn = (gjoll_connection_t *)handle->data;
     if(conn->readlen >= 0) {

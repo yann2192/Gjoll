@@ -40,6 +40,7 @@ Documentation
 To build
 ========
 ::
+
     $ git clone https://github.com/yann2192/Gjoll.git gjoll
     $ cd gjoll
     $ git submodule init && git submodule update
