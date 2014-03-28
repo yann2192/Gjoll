@@ -22,7 +22,7 @@ GJOLL
  a flexible and secure backend. The Gjoll library uses a central router to relay
  information to and from nodes on the network, and makes development very easy.
 
-Gjoll uses `libuv <https://github.com/joyent/libuv>`_, `uthash <https://github.com/troydhanson/uthash>`_ and `lua 5.2 <http://www.lua.org/about.html>`_.
+Gjoll uses `libuv <https://github.com/joyent/libuv>`_, `ordo <https://github.com/TomCrypto/Ordo>`_, `uthash <https://github.com/troydhanson/uthash>`_ and `lua 5.2 <http://www.lua.org/about.html>`_.
 
 TODO
 ====
