@@ -17,8 +17,7 @@
 void gjoll__parser_init(gjoll__parser_t *parser) {
     parser->i = 0;
     parser->state = GJOLL_PARSE_HEADER;
-    parser->data.base = NULL;
-    parser->data.len = 0;
+    parser->datalen = 0;
 }
 
 size_t gjoll__parser_parse(gjoll__parser_t *parser,
@@ -60,21 +59,22 @@ size_t gjoll__parser_parse(gjoll__parser_t *parser,
             break;
         case GJOLL_PARSE_DATA:
             if(parser->i == 0) {
-                memcpy(parser->data.base, &(parser->lenbuff), GJOLL_LEN_SIZE);
+                memcpy(parser->data, &(parser->lenbuff), GJOLL_LEN_SIZE);
                 parser->i += GJOLL_LEN_SIZE;
             }
-            needed = parser->data.len + GJOLL_FINGERPRINT_SIZE -
+            needed = parser->datalen + GJOLL_FINGERPRINT_SIZE -
                      parser->i + GJOLL_LEN_SIZE;
             if(buf.len > needed) {
                 i = needed;
             } else {
                 i = buf.len;
             }
-            memcpy(OFFSET(parser->data.base, parser->i), buf.base, i);
+            memcpy(OFFSET(parser->data, parser->i), buf.base, i);
             parser->i += i;
-            if(parser->i == parser->data.len + GJOLL_FINGERPRINT_SIZE +
+            if(parser->i == parser->datalen + GJOLL_FINGERPRINT_SIZE +
                             GJOLL_LEN_SIZE) {
                 parser->i = 0;
+                parser->datalen = 0;
                 parser->state = GJOLL_PARSE_SIZE;
                 *action = GJOLL_DATA_ACTION;
             }
@@ -84,14 +84,10 @@ size_t gjoll__parser_parse(gjoll__parser_t *parser,
     return i;
 }
 
-int gjoll__parser_alloc_data(gjoll__parser_t *parser, size_t len) {
-    parser->data.len = len;
-    len += GJOLL_FINGERPRINT_SIZE + GJOLL_LEN_SIZE;
-    return !(parser->data.base = malloc(len));
-}
-
-void gjoll__parser_free_data(gjoll__parser_t *parser) {
-    if(parser->data.base != NULL) {
-        FREEDATA(parser);
+int gjoll__parser_set_datalen(gjoll__parser_t *parser, size_t len) {
+    if(len > GJOLL_ALLOC_MAX) {
+        return -1;
     }
+    parser->datalen = len;
+    return 0;
 }

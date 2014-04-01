@@ -65,11 +65,18 @@ static int gjoll__send_header(gjoll_sconnection_t *conn) {
     gjoll_buf_t packet;
     gjoll_send_t *greq;
 
-    if(!(greq = malloc(sizeof(gjoll_send_t))))
+    packet.len = GJOLL_HEADER_LENGTH;
+    packet.base = malloc(packet.len);
+    if(packet.base == NULL) {
         return -1;
+    }
 
-    if(gjoll_encrypt_header(&(conn->cout), conn->secret, conn->header, &packet,
-                            NULL))
+    if(!(greq = malloc(sizeof(gjoll_send_t)))) {
+        return -2;
+    }
+
+    if(gjoll_encrypt_header(&(conn->cout), conn->secret, conn->header,
+                            &packet, NULL))
         goto err;
 
     greq->data = packet.base;
@@ -136,21 +143,21 @@ static void gjoll__recv_cb(gjoll_connection_t *conn, gjoll_buf_t buf) {
                                       &len)) {
                     goto err;
                 }
-                if(gjoll__parser_alloc_data(&(sconn->parser), len))
+                if(gjoll__parser_set_datalen(&(sconn->parser), len))
                     goto err;
                 action = GJOLL_NONE_ACTION;
                 break;
             case GJOLL_DATA_ACTION:
-                memset(&data, 0, sizeof(gjoll_buf_t));
+                data.len = len;
+                /* align buffer to decryption */
+                data.base = OFFSET(sconn->parser.data, GJOLL_LEN_SIZE);
                 if(gjoll_decrypt_data(&(sconn->cin), len,
-                                      sconn->parser.data, &data)) {
+                                      gjoll_buf_init(sconn->parser.data, len),
+                                      &data)) {
                     goto err;
                 }
-                gjoll__parser_free_data(&(sconn->parser));
                 if(sconn->recv_cb != NULL) {
                     sconn->recv_cb(sconn, data);
-                } else {
-                    free(data.base);
                 }
                 action = GJOLL_NONE_ACTION;
                 break;
@@ -165,7 +172,6 @@ static void gjoll__recv_cb(gjoll_connection_t *conn, gjoll_buf_t buf) {
     return;
 
 err:
-    gjoll__parser_free_data(&(sconn->parser));
     gjoll_sconnection_close(sconn);
     return;
 }
@@ -272,7 +278,6 @@ void gjoll_sconnection_close(gjoll_sconnection_t *conn) {
 void gjoll_sconnection_clean(gjoll_sconnection_t *conn) {
     gjoll_crypto_clean(&(conn->cin));
     gjoll_crypto_clean(&(conn->cout));
-    gjoll__parser_free_data(&(conn->parser));
     gjoll_connection_clean(&(conn->conn));
 }
 
@@ -296,9 +301,15 @@ int gjoll_ssend(gjoll_ssend_t *sreq,
 
     plaintext.base = data;
     plaintext.len = len;
-
-    if(gjoll_encrypt_data(&(conn->cout), plaintext, &ciphertext))
+    ciphertext.len = GJOLL_DATA_MIN_LENGTH + len;
+    ciphertext.base = malloc(ciphertext.len);
+    if(ciphertext.base == NULL) {
         return -1;
+    }
+
+    if(gjoll_encrypt_data(&(conn->cout), plaintext, &ciphertext)) {
+        return -2;
+    }
 
     sreq->buffer = ciphertext;
     sreq->req.data = sreq;

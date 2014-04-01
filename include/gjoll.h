@@ -62,6 +62,8 @@ extern "C" {
 #define GJOLL_HEADER_LENGTH 42
 #define GJOLL_DATA_MIN_LENGTH 18
 
+#define GJOLL_ALLOC_MAX 65536
+
 /*
  * Length of a gjoll shared secret, in bytes.
  */
@@ -164,7 +166,8 @@ struct gjoll__parser_s {
     size_t i;
     char hbuf[GJOLL_HEADER_LENGTH];
     gjoll_len_t lenbuff;
-    gjoll_buf_t data;
+    char data[GJOLL_ALLOC_MAX+GJOLL_LEN_SIZE+GJOLL_FINGERPRINT_SIZE];
+    size_t datalen;
 };
 
 // allocates a gjoll_buf_t
@@ -209,6 +212,7 @@ struct gjoll_connection_s {
     gjoll_loop_t gloop;
     uv_tcp_t client;
     int readlen;
+    char buffer[GJOLL_ALLOC_MAX];
     gjoll__conn_type_t type;
     gjoll_recv_cb recv_cb;
     gjoll_close_cb close_cb;
