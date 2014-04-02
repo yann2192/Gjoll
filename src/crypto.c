@@ -12,7 +12,7 @@ static const unsigned char zero_iv[GJOLL_IV_LEN];
 int gjoll_preprocess_secret(const void *buffer, size_t len,
                             gjoll_secret_t *secret)
 {
-    return ordo_digest(sha256(), 0, buffer, len, secret->secret);
+    return ordo_digest(ordo_sha256(), 0, buffer, len, secret->secret);
 }
 
 int gjoll_encrypt_header(gjoll__context_t *gctx,
@@ -29,7 +29,7 @@ int gjoll_encrypt_header(gjoll__context_t *gctx,
     if (!nonce) os_random(session_nonce, sizeof(session_nonce));
     else memcpy(session_nonce, nonce, sizeof(session_nonce));
 
-    if (ordo_hmac(sha256(), 0, secret.secret, GJOLL_SECRET_LEN, session_nonce,
+    if (ordo_hmac(ordo_sha256(), 0, secret.secret, GJOLL_SECRET_LEN, session_nonce,
                   sizeof(session_nonce), gctx->key)) goto error;
 
     /* Convert the header fields to big endian for transport. */
@@ -45,7 +45,7 @@ int gjoll_encrypt_header(gjoll__context_t *gctx,
     memcpy(OFFSET(packet->base, 0), session_nonce, sizeof(session_nonce));
     memcpy(OFFSET(packet->base, 8), &header.src,   sizeof(header.src));
 
-    if (!(gctx->ctx = enc_block_alloc(threefish256(), ctr()))) goto error;
+    if (!(gctx->ctx = enc_block_alloc(ordo_threefish256(), ordo_ctr()))) goto error;
     if (enc_block_init(gctx->ctx, gctx->key, 32, zero_iv, GJOLL_IV_LEN, 1, 0, 0))
         goto error;
 
@@ -54,7 +54,7 @@ int gjoll_encrypt_header(gjoll__context_t *gctx,
     enc_block_update(gctx->ctx, &header.id ,        2, OFFSET(packet->base, 24), 0);
 
     /* Calculate the packet fingerprint. */
-    if (!(h_ctx = hmac_alloc(sha256()))) goto error;
+    if (!(h_ctx = hmac_alloc(ordo_sha256()))) goto error;
     if (hmac_init(h_ctx, gctx->key, sizeof(gctx->key), 0)) goto error;
     hmac_update(h_ctx, OFFSET(packet->base,  0), 26);
     hmac_final(h_ctx,  fingerprint);
@@ -90,7 +90,7 @@ int gjoll_encrypt_data(gjoll__context_t *gctx,
                      OFFSET(packet->base, 2), 0);
 
     /* Calculate the packet fingerprint. */
-    if (!(h_ctx = hmac_alloc(sha256()))) goto error;
+    if (!(h_ctx = hmac_alloc(ordo_sha256()))) goto error;
     if (hmac_init(h_ctx, gctx->key, sizeof(gctx->key), 0)) goto error;
     hmac_update(h_ctx, OFFSET(packet->base, 0), data.len+2);
     hmac_final(h_ctx, fingerprint);
@@ -117,10 +117,10 @@ int gjoll_decrypt_header(gjoll__context_t *gctx,
     memcpy(nonce, OFFSET(packet.base, 0), sizeof(nonce));
     memcpy(&header->src, OFFSET(packet.base, 8), sizeof(header->src));
 
-    if (ordo_hmac(sha256(), 0, secret.secret, GJOLL_SECRET_LEN,
+    if (ordo_hmac(ordo_sha256(), 0, secret.secret, GJOLL_SECRET_LEN,
                   nonce, sizeof(nonce), gctx->key)) goto error;
 
-    if (!(h_ctx = hmac_alloc(sha256()))) goto error;
+    if (!(h_ctx = hmac_alloc(ordo_sha256()))) goto error;
     if (hmac_init(h_ctx, gctx->key, sizeof(gctx->key), 0)) goto error;
     hmac_update(h_ctx, OFFSET(packet.base,  0), 26);
     hmac_final(h_ctx,  fingerprint);
@@ -129,7 +129,7 @@ int gjoll_decrypt_header(gjoll__context_t *gctx,
 
     if (memcmp(fingerprint, OFFSET(packet.base, 26), 16) != 0) goto error;
 
-    if (!(gctx->ctx = enc_block_alloc(threefish256(), ctr()))) goto error;
+    if (!(gctx->ctx = enc_block_alloc(ordo_threefish256(), ordo_ctr()))) goto error;
     if (enc_block_init(gctx->ctx, gctx->key, 32, zero_iv, GJOLL_IV_LEN, 1, 0, 0))
         goto error;
     enc_block_update(gctx->ctx, OFFSET(packet.base, 16),  8, &header->dst, 0);
@@ -167,7 +167,7 @@ int gjoll_decrypt_data(gjoll__context_t *gctx,
     struct HMAC_CTX *h_ctx = NULL;
 
     /* Calculate the packet fingerprint. */
-    if (!(h_ctx = hmac_alloc(sha256()))) goto error;
+    if (!(h_ctx = hmac_alloc(ordo_sha256()))) goto error;
     if (hmac_init(h_ctx, gctx->key, sizeof(gctx->key), 0)) goto error;
     //hmac_update(h_ctx, OFFSET(&size, 0), 2);
     hmac_update(h_ctx, OFFSET(packet.base, 0), size+GJOLL_LEN_SIZE);
