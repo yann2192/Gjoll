@@ -27,6 +27,12 @@ Gjoll uses `libuv <https://github.com/joyent/libuv>`_, `ordo <https://github.com
 TODO
 ====
 
+- unittests
+- documentations
+
+Idea
+====
+
 - Automatic reconnect gjoll connections (optional)
 - Forwarding
 - Automatic node discovering (through friends only)

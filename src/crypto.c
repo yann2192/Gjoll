@@ -37,9 +37,7 @@ int gjoll_encrypt_header(gjoll__context_t *gctx,
     header.dst = tobe64(header.dst);
     header.id  = tobe16(header.id);
 
-    /* Allocate the packet buffer as large as required. */
     packet->len = GJOLL_HEADER_LENGTH;
-    if (!(packet->base = malloc(packet->len))) goto error;
 
     /* Copy the session nonce and the source node into the packet. */
     memcpy(OFFSET(packet->base, 0), session_nonce, sizeof(session_nonce));
@@ -58,20 +56,19 @@ int gjoll_encrypt_header(gjoll__context_t *gctx,
     if (hmac_init(h_ctx, gctx->key, sizeof(gctx->key), 0)) goto error;
     hmac_update(h_ctx, OFFSET(packet->base,  0), 26);
     hmac_final(h_ctx,  fingerprint);
-    memcpy(OFFSET(packet->base, 26), fingerprint, 16); // truncate fingerprint
+    memcpy(OFFSET(packet->base, 26), fingerprint, 16); /* truncate fingerprint */
     hmac_free(h_ctx);
 
     return 0;
 
 error:
-    if (packet->base) free(packet->base);
     if (h_ctx) hmac_free(h_ctx);
     return 1;
 }
 
 int gjoll_encrypt_data(gjoll__context_t *gctx,
                        gjoll_buf_t data,
-                       gjoll_buf_t   *packet)
+                       gjoll_buf_t *packet)
 {
     gjoll_len_t size;
     unsigned char fingerprint[32];
@@ -79,9 +76,7 @@ int gjoll_encrypt_data(gjoll__context_t *gctx,
 
     size = tobe16((gjoll_len_t)data.len);
 
-    /* Allocate the packet buffer as large as required. */
     packet->len = GJOLL_DATA_MIN_LENGTH + data.len;
-    if (!(packet->base = malloc(packet->len))) goto error;
 
     /* Encrypt the dst node and the serviceID into the right packet offset. */
     enc_block_update(gctx->ctx, &size, sizeof(gjoll_len_t),
@@ -94,13 +89,12 @@ int gjoll_encrypt_data(gjoll__context_t *gctx,
     if (hmac_init(h_ctx, gctx->key, sizeof(gctx->key), 0)) goto error;
     hmac_update(h_ctx, OFFSET(packet->base, 0), data.len+2);
     hmac_final(h_ctx, fingerprint);
-    memcpy(OFFSET(packet->base, data.len+2), fingerprint, 16); // truncate fingerprint
+    memcpy(OFFSET(packet->base, data.len+2), fingerprint, 16); /* truncate fingerprint */
     hmac_free(h_ctx);
 
     return 0;
 
 error:
-    if (packet->base) free(packet->base);
     if (h_ctx) hmac_free(h_ctx);
     return 1;
 }
@@ -135,7 +129,7 @@ int gjoll_decrypt_header(gjoll__context_t *gctx,
     enc_block_update(gctx->ctx, OFFSET(packet.base, 16),  8, &header->dst, 0);
     enc_block_update(gctx->ctx, OFFSET(packet.base, 24) , 2, &header->id, 0);
 
-    // src/dst/id back to host
+    /* src/dst/id back to host */
     header->src = fmbe64(header->src);
     header->dst = fmbe64(header->dst);
     header->id  = fmbe16(header->id);
@@ -161,7 +155,7 @@ int gjoll_decrypt_size(gjoll__context_t *gctx,
 int gjoll_decrypt_data(gjoll__context_t *gctx,
                        gjoll_len_t    size,
                        gjoll_buf_t    packet,
-                       gjoll_buf_t   *data)
+                       gjoll_buf_t    *data)
 {
     unsigned char fingerprint[32];
     struct HMAC_CTX *h_ctx = NULL;
@@ -169,7 +163,7 @@ int gjoll_decrypt_data(gjoll__context_t *gctx,
     /* Calculate the packet fingerprint. */
     if (!(h_ctx = hmac_alloc(ordo_sha256()))) goto error;
     if (hmac_init(h_ctx, gctx->key, sizeof(gctx->key), 0)) goto error;
-    //hmac_update(h_ctx, OFFSET(&size, 0), 2);
+    /* hmac_update(h_ctx, OFFSET(&size, 0), 2); */
     hmac_update(h_ctx, OFFSET(packet.base, 0), size+GJOLL_LEN_SIZE);
     hmac_final(h_ctx, fingerprint);
     hmac_free(h_ctx);
@@ -178,10 +172,7 @@ int gjoll_decrypt_data(gjoll__context_t *gctx,
     if (memcmp(fingerprint, OFFSET(packet.base, size+GJOLL_LEN_SIZE),
                16) != 0) goto error;
 
-    if (!data) goto error;
     data->len = size;
-    data->base = malloc(data->len);
-    if (!data->base) goto error;
 
     enc_block_update(gctx->ctx, OFFSET(packet.base, GJOLL_LEN_SIZE), size,
                      data->base, 0);
@@ -189,7 +180,6 @@ int gjoll_decrypt_data(gjoll__context_t *gctx,
     return 0;
 
 error:
-    if (data->base) free(data->base);
     if (h_ctx) hmac_free(h_ctx);
     return -1;
 }

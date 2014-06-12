@@ -13,7 +13,6 @@
 
 static void close_cb(gjoll_connection_t *conn) {
     gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
-    gjoll_log("local connection closed\n");
     gjoll_connection_clean(conn);
     if(gjoll_sconnection_closed(&(cc->gconn))) {
         DL_DELETE(cc->d->ccs, cc);
@@ -25,7 +24,6 @@ static void close_cb(gjoll_connection_t *conn) {
 
 static void sclose_cb(gjoll_sconnection_t *conn) {
     gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
-    gjoll_log("connection closed\n");
     gjoll_sconnection_clean(conn);
     if(gjoll_connection_closed(&(cc->lconn))) {
         DL_DELETE(cc->d->ccs, cc);
@@ -37,7 +35,6 @@ static void sclose_cb(gjoll_sconnection_t *conn) {
 
 static void sclose_cb2(gjoll_sconnection_t *conn) {
     gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
-    gjoll_log("connection closed\n");
     gjoll_sconnection_clean(conn);
     DL_DELETE(cc->d->ccs, cc);
     free(cc);
@@ -66,7 +63,6 @@ static void recv_cb(gjoll_connection_t *conn,
             free(req);
         }
     }
-    //free(buf.base);
 }
 
 static void srecv_cb(gjoll_sconnection_t *conn,
@@ -79,7 +75,6 @@ static void srecv_cb(gjoll_sconnection_t *conn,
             free(req);
         }
     }
-    free(buf.base);
 }
 
 static void connect_cb(gjoll_connection_t *conn, int status) {
@@ -108,6 +103,8 @@ static void sconnect_cb(gjoll_sconnection_t *conn, int status) {
     if(f == NULL) {
         gjoll_sconnection_close(conn);
     } else {
+        gjoll_log("outgoing connection from %ld to %ld on %d\n",
+                  conn->header.src, conn->header.dst, conn->header.id);
         if(gjoll_sconnection_init(conn, f->shared, f->shared_len, srecv_cb)) {
             gjoll_sconnection_close(conn);
         }
@@ -118,10 +115,6 @@ static void sconnect_cb(gjoll_sconnection_t *conn, int status) {
 }
 
 static int header_cb(gjoll_sconnection_t *conn, gjoll_header_t header) {
-    gjoll_log("header.id: %d\n", header.id);
-    gjoll_log("header.src: %ld\n", header.src);
-    gjoll_log("header.dst: %ld\n", header.dst);
-
     if(conn->conn.type == GJOLL_SERVER) {
         gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
         gjoll_rule_t *rule = gjoll_daemon_get_rule(cc->d, header.id);
@@ -129,6 +122,10 @@ static int header_cb(gjoll_sconnection_t *conn, gjoll_header_t header) {
         if(rule == NULL) {
             return -1;
         }
+
+        gjoll_log("incoming connection from %ld to %ld on %d\n",
+                header.src, header.dst, header.id);
+
         /* Stop reading during local connection */
         gjoll_sconnection_readlen(conn, 0);
         if(gjoll_connect(cc->d->gloop, &(cc->lconn),
@@ -144,7 +141,6 @@ static int header_cb(gjoll_sconnection_t *conn, gjoll_header_t header) {
 static int session_cb(gjoll_sconnection_t *conn, gjoll_node_t src) {
     gjoll__conn_context_t *cc = (gjoll__conn_context_t *)conn->data;
     gjoll_friend_t *f = gjoll_daemon_get_friend(cc->d, src);
-    gjoll_log("src: %ld\n", src);
     if(f == NULL) {
         return -1;
     }

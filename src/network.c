@@ -38,23 +38,15 @@ int gjoll_run(gjoll_loop_t gloop) {
 }
 
 static void gjoll__alloc_cb(uv_handle_t *handle, size_t suggested_size,
-                     uv_buf_t *buf) {
-    /*
-     * NOTE: maybe create a static buffer for eatch gjoll_connection_t to
-     * limit allocation.
-     */
-
-    char *buff;
+                            uv_buf_t *buf) {
     gjoll_connection_t *conn = (gjoll_connection_t *)handle->data;
-    if(conn->readlen >= 0) {
+    if(conn->readlen >= 0 && conn->readlen <= GJOLL_ALLOC_MAX) {
         suggested_size = conn->readlen;
+    } else {
+        suggested_size = GJOLL_ALLOC_MAX;
     }
-    buff = malloc(suggested_size);
-    if(buff != NULL) {
-        memset(buff, 0, suggested_size);
-        buf->base = buff;
-        buf->len = suggested_size;
-    }
+    buf->base = conn->buffer;
+    buf->len = suggested_size;
 }
 
 int gjoll_listener_init(gjoll_loop_t gloop,
@@ -131,15 +123,15 @@ static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
         conn->recv_cb(conn, gbuf);
     }
 
-    free(buf->base);
+    /* free(buf->base); */
     return;
 
 skip:
-    if(buf->base != NULL) free(buf->base);
+    /* if(buf->base != NULL) free(buf->base); */
     return;
 
 err:
-    if(buf->base != NULL) free(buf->base);
+    /* if(buf->base != NULL) free(buf->base); */
     gjoll_connection_close(conn);
     return;
 }

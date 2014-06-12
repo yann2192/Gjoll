@@ -1,7 +1,7 @@
 #ifndef GJOLL_CRYPTO_H
 #define GJOLL_CRYPTO_H
 
-// private header
+/* private header */
 
 #include "gjoll.h"
 #include "ordo.h"

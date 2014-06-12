@@ -17,42 +17,41 @@ static char* test__gjoll__parser_init() {
     mu_assert("test__gjoll__parser_init: parser.i != 0", parser.i == 0);
     mu_assert("test__gjoll__parser_init: parser.state != GJOLL_PARSE_HEADER",
               parser.state == GJOLL_PARSE_HEADER);
-    mu_assert("test__gjoll__parser_init: parser.data.base != NULL",
-              parser.data.base == NULL);
-    mu_assert("test__gjoll__parser_init: parser.data.len != 0",
-              parser.data.len == 0);
+    mu_assert("test__gjoll__parser_init: parser.datalen != 0",
+              parser.datalen == 0);
     return 0;
 }
 
-static char* test__gjoll__parser_alloc() {
+static char* test__gjoll__parser_set_datalen() {
     int res;
+    size_t i;
     gjoll__parser_t parser;
 
     gjoll__parser_init(&parser);
-    mu_assert("test__gjoll__parser_init: parser.data.base != NULL",
-              parser.data.base == NULL);
-    mu_assert("test__gjoll__parser_init: parser.data.len != 0",
-              parser.data.len == 0);
+    mu_assert("test__gjoll__parser_init: parser.datalen != 0",
+              parser.datalen == 0);
 
-    gjoll__parser_free_data(&parser);
-    mu_assert("test__gjoll__parser_init: parser.data.base != NULL",
-              parser.data.base == NULL);
-    mu_assert("test__gjoll__parser_init: parser.data.len != 0",
-              parser.data.len == 0);
-
-    res = gjoll__parser_alloc_data(&parser, 4);
-    mu_assert("test__gjoll__parser_init: gjoll__parser_alloc_data != 0",
+    res = gjoll__parser_set_datalen(&parser, 4);
+    mu_assert("test__gjoll__parser_init: gjoll__parser_set_datalen != 0",
               !res);
-    mu_assert("test__gjoll__parser_init: parser.data.base == NULL",
-              parser.data.base != NULL);
-    mu_assert("test__gjoll__parser_init: parser.data.len != 4",
-              parser.data.len == 4);
+    mu_assert("test__gjoll__parser_init: parser.datalen != 4",
+              parser.datalen == 4);
 
-    gjoll__parser_free_data(&parser);
-    mu_assert("test__gjoll__parser_init: parser.data.base != NULL",
-              parser.data.base == NULL);
-    mu_assert("test__gjoll__parser_init: parser.data.len != 0",
-              parser.data.len == 0);
+    i = GJOLL_ALLOC_MAX + 1;
+    res = gjoll__parser_set_datalen(&parser, i);
+    mu_assert("test__gjoll__parser_init: gjoll__parser_set_datalen == 0",
+              res);
+    mu_assert("test__gjoll__parser_init: parser.datalen == i",
+              parser.datalen != i);
+
+    i = GJOLL_ALLOC_MAX;
+    res = gjoll__parser_set_datalen(&parser, i);
+    mu_assert("test__gjoll__parser_init: gjoll__parser_set_datalen != 0",
+              !res);
+    mu_assert("test__gjoll__parser_init: parser.datalen != i",
+              parser.datalen == i);
+
+
     return 0;
 }
 
@@ -185,8 +184,8 @@ static char* test__gjoll__parser_parse_data() {
     /* parse the size */
     i += gjoll__parser_parse(&parser, &action, buf);
 
-    res = gjoll__parser_alloc_data(&parser, 4);
-    mu_assert("test__gjoll__parser_parse_data: gjoll__parser_alloc_data != 0",
+    res = gjoll__parser_set_datalen(&parser, 4);
+    mu_assert("test__gjoll__parser_parse_data: gjoll__parser_set_datalen != 0",
               !res);
 
     buf.len = 4 + GJOLL_FINGERPRINT_SIZE;
@@ -200,8 +199,6 @@ static char* test__gjoll__parser_parse_data() {
     mu_assert("test__gjoll__parser_parse_data: parser state != GJOLL_PARSE_SIZE",
               parser.state == GJOLL_PARSE_SIZE);
 
-
-    gjoll__parser_free_data(&parser);
     return 0;
 }
 
@@ -225,8 +222,8 @@ static char* test__gjoll__parser_parse_data2() {
     /* parse the size */
     i += gjoll__parser_parse(&parser, &action, buf);
 
-    res = gjoll__parser_alloc_data(&parser, 4);
-    mu_assert("test__gjoll__parser_parse_data: gjoll__parser_alloc_data != 0",
+    res = gjoll__parser_set_datalen(&parser, 4);
+    mu_assert("test__gjoll__parser_parse_data: gjoll__parser_set_datalen != 0",
               !res);
 
     buf.len = 4;
@@ -250,8 +247,6 @@ static char* test__gjoll__parser_parse_data2() {
     mu_assert("test__gjoll__parser_parse_data2: parser state != GJOLL_PARSE_SIZE",
               parser.state == GJOLL_PARSE_SIZE);
 
-
-    gjoll__parser_free_data(&parser);
     return 0;
 }
 
@@ -275,8 +270,8 @@ static char* test__gjoll__parser_parse_data3() {
     /* parse the size */
     i += gjoll__parser_parse(&parser, &action, buf);
 
-    res = gjoll__parser_alloc_data(&parser, 4);
-    mu_assert("test__gjoll__parser_parse_data: gjoll__parser_alloc_data != 0",
+    res = gjoll__parser_set_datalen(&parser, 4);
+    mu_assert("test__gjoll__parser_parse_data: gjoll__parser_set_datalen != 0",
               !res);
 
     buf.len = 4 + GJOLL_FINGERPRINT_SIZE + 2;
@@ -300,14 +295,12 @@ static char* test__gjoll__parser_parse_data3() {
     mu_assert("test__gjoll__parser_parse_data3: parser state != GJOLL_PARSE_DATA",
               parser.state == GJOLL_PARSE_DATA);
 
-
-    gjoll__parser_free_data(&parser);
     return 0;
 }
 
 char* parser_tests() {
     mu_run_test(test__gjoll__parser_init);
-    mu_run_test(test__gjoll__parser_alloc);
+    mu_run_test(test__gjoll__parser_set_datalen);
     mu_run_test(test__gjoll__parser_parse_header);
     mu_run_test(test__gjoll__parser_parse_header2);
     mu_run_test(test__gjoll__parser_parse_header3);

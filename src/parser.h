@@ -15,7 +15,7 @@ typedef enum {
     GJOLL_NONE_ACTION,
     GJOLL_HEADER_ACTION,
     GJOLL_SIZE_ACTION,
-    GJOLL_DATA_ACTION,
+    GJOLL_DATA_ACTION
 } gjoll__parse_action_t;
 
 void gjoll__parser_init(gjoll__parser_t *parser);
@@ -24,8 +24,6 @@ size_t gjoll__parser_parse(gjoll__parser_t *parser,
                            gjoll__parse_action_t *action,
                            gjoll_buf_t buf);
 
-int gjoll__parser_alloc_data(gjoll__parser_t *parser, size_t len);
-
-void gjoll__parser_free_data(gjoll__parser_t *parser);
+int gjoll__parser_set_datalen(gjoll__parser_t *parser, size_t len);
 
 #endif

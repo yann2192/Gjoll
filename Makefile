@@ -1,4 +1,4 @@
-FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -Wdeclaration-after-statement -D_GNU_SOURCE -std=c99 -pthread -lm -DBUILDING_GJOLL -DORDO_STATIC_LIB
+FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -Wdeclaration-after-statement -D_GNU_SOURCE -std=c89 -pthread -lm -DBUILDING_GJOLL -DORDO_STATIC_LIB
 
 BINDIR = bin
 OBJDIR = obj
@@ -13,6 +13,8 @@ LUA_INCLUDE = lua-5.2.3/src
 LIBUV_LIB = libuv/.libs/libuv.a
 ORDO_LIB = ordo/build/libordo_s.a
 LUA_LIB = lua-5.2.3/src/liblua.a
+
+#ORDO_CONFIG = -DLTO=off
 
 LD_FLAGS = $(LIBUV_LIB) $(ORDO_LIB) $(LUA_LIB)
 
