@@ -15,7 +15,7 @@ typedef enum {
     GJOLL_NONE_ACTION,
     GJOLL_HEADER_ACTION,
     GJOLL_SIZE_ACTION,
-    GJOLL_DATA_ACTION,
+    GJOLL_DATA_ACTION
 } gjoll__parse_action_t;
 
 void gjoll__parser_init(gjoll__parser_t *parser);

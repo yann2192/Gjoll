@@ -123,15 +123,15 @@ static void gjoll__recv_cb(uv_stream_t *client, ssize_t nread,
         conn->recv_cb(conn, gbuf);
     }
 
-    //free(buf->base);
+    /* free(buf->base); */
     return;
 
 skip:
-    //if(buf->base != NULL) free(buf->base);
+    /* if(buf->base != NULL) free(buf->base); */
     return;
 
 err:
-    //if(buf->base != NULL) free(buf->base);
+    /* if(buf->base != NULL) free(buf->base); */
     gjoll_connection_close(conn);
     return;
 }

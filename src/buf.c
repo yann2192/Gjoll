@@ -17,10 +17,16 @@ void gjoll_buf_free(gjoll_buf_t* buf) {
 
 uv_buf_t gjoll_to_uv(gjoll_buf_t buf)
 {
-    return (uv_buf_t){buf.base, buf.len};
+    uv_buf_t res;
+    res.base = buf.base;
+    res.len = buf.len;
+    return res;
 }
 
 gjoll_buf_t uv_to_gjoll(uv_buf_t buf)
 {
-    return (gjoll_buf_t){buf.base, buf.len};
+    gjoll_buf_t res;
+    res.base = buf.base;
+    res.len = buf.len;
+    return res;
 }

@@ -74,7 +74,7 @@ extern "C" {
 
 enum gjoll__conn_type_s {
     GJOLL_CLIENT,
-    GJOLL_SERVER,
+    GJOLL_SERVER
 };
 
 /* types */
@@ -170,10 +170,10 @@ struct gjoll__parser_s {
     size_t datalen;
 };
 
-// allocates a gjoll_buf_t
+/* allocates a gjoll_buf_t */
 GJOLL_EXTERN gjoll_buf_t gjoll_buf_init(void *, size_t);
 
-// frees a gjoll_buf_t
+/* frees a gjoll_buf_t */
 GJOLL_EXTERN void gjoll_buf_free(gjoll_buf_t *buf);
 
 GJOLL_EXTERN int gjoll_init(gjoll_loop_t *);
