@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
 
     if(argc > 1) {
         if(gjoll_lua_load(l, argv[1])) {
-            fprintf(stderr, gjoll_lua_geterror(l));
+            fprintf(stderr, "%s", gjoll_lua_geterror(l));
             goto err;
         }
     }
