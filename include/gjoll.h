@@ -50,6 +50,7 @@ extern "C" {
 #include <string.h>
 
 #include "uv.h"
+#include "ordo.h"
 #include "uthash.h"
 #include "lua.h"
 
@@ -157,7 +158,7 @@ struct gjoll_loop_s {
 };
 
 struct gjoll__context_s {
-    struct ENC_BLOCK_CTX *ctx;
+    struct ENC_BLOCK_CTX ctx;
     unsigned char key[32];
 };
 
