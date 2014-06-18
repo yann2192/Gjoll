@@ -1,4 +1,4 @@
-FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -Wdeclaration-after-statement -D_GNU_SOURCE -std=c89 -pthread -lm -DBUILDING_GJOLL -DORDO_STATIC_LIB
+FLAGS = -g -Wall -Wextra -pedantic -pipe -Wno-unused-parameter -Wdeclaration-after-statement -D_GNU_SOURCE -std=c89 -pthread -DBUILDING_GJOLL -DORDO_STATIC_LIB
 
 BINDIR = bin
 OBJDIR = obj
@@ -16,7 +16,7 @@ LUA_LIB = lua-5.2.3/src/liblua.a
 
 #ORDO_CONFIG = -DLTO=off
 
-LD_FLAGS = $(LIBUV_LIB) $(ORDO_LIB) $(LUA_LIB)
+LD_FLAGS = $(LIBUV_LIB) $(ORDO_LIB) $(LUA_LIB) -lm
 
 SRC = $(wildcard $(SRCDIR)/*.c)
 OBJ = $(notdir $(SRC:.c=.o))
